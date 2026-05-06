@@ -2,7 +2,8 @@
   "name": "job-hunter",
   "private": true,
   "scripts": {
-    "dev": "turbo dev",
+    "predev": "node tools/check-ram.js",
+    "dev": "turbo run dev --concurrency=2",
     "build": "turbo build",
     "lint": "turbo lint",
     "dev:web": "turbo dev --filter=web",

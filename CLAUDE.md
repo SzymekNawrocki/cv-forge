@@ -22,8 +22,8 @@ apps/api/
 ├── .env                        ← DATABASE_URL, OLLAMA_BASE_URL
 ├── requirements.txt
 ├── ai/
-│   ├── client.py               ← OllamaClient: analyze_jd, forge_section, clean_cv
-│   ├── prompts.py              ← Prompt templates (ANALYZE_JD, FORGE_SECTION, CLEAN_CV)
+│   ├── client.py               ← OllamaClient: analyze_jd, forge_section, clean_cv, calculate_match_score
+│   ├── prompts.py              ← Prompt templates (ANALYZE_JD, FORGE_SECTION, CLEAN_CV, MATCH_SCORE)
 │   └── ollama_client.py        ← Legacy low-level generate() helper
 ├── db/
 │   ├── base.py                 ← Async engine, SessionLocal, get_session()
@@ -51,7 +51,7 @@ apps/api/
 
 ## Forge Loop
 1. `POST /cv/import` — raw text → `clean_cv` (1b) → `MasterCV` saved to DB
-2. `POST /cv/forge` — select `MasterCV` + paste JD → `analyze_jd` (1b) extracts keywords → `forge_section` (3b) rewrites Summary/Experience/Skills → `TailoredCV` saved to DB
+2. `POST /cv/forge` — select `MasterCV` + paste JD → `analyze_jd` (1b) extracts keywords → `calculate_match_score` (1b) scores original CV → `forge_section` (3b) rewrites Summary/Experience/Skills → `calculate_match_score` (1b) scores tailored CV → `TailoredCV` saved with `initial_match_score` + `match_score`
 
 ## Frontend Pages (`apps/web/src/app`)
 | Route | Description |
@@ -59,13 +59,30 @@ apps/api/
 | `/` | Job listings |
 | `/jobs/[id]` | Job detail |
 | `/cv-manager` | Import raw CV + browse saved CVs |
-| `/forge` | JD input (left) / tailored markdown result (right) |
+| `/forge` | JD input (left) / rendered Markdown CV (right) + Before→After score badges + Download PDF |
 
 All API calls go through `src/lib/api.ts`. Client Components only at leaf level.
 
+## Frontend Dependencies
+- `react-markdown` + `remark-gfm` — render tailored CV as HTML in forge view
+- CV prose styles live in `globals.css` under `.cv-preview` class
+- `@media print` in `globals.css` hides all UI except `#cv-print-area` — powers the Download PDF button via `window.print()`
+
+## Dev Startup
+
+`npm run dev` from root runs in this sequence:
+
+1. **RAM check** — `tools/check-ram.js` (node, `os.freemem()`). Exits 1 if < 1 GB free, blocking dev start.
+2. **DB init** — `apps/api/init_db.py` via Turbo `init-db` task. Creates all tables via SQLAlchemy, exits. Runs before API uvicorn process.
+3. **API** — uvicorn on `:8000`. Logs `🚀 API Ready - Database Connected` after lifespan `create_all`.
+4. **Frontend** — `next dev` on `:3000`. Starts in parallel with API (App Router renders on demand, no startup pre-render).
+
+Turbo config: `--concurrency=2`, `init-db` task is non-persistent/no-cache, `dev` task `dependsOn: ["init-db"]`.
+
 ## Development Rules
 - **JSON Only**: All Ollama calls use `format: "json"`. Parse with `_parse_json()` in `ai/client.py`.
-- **DB init**: `create_all` on startup — no Alembic yet.
+- **DB init**: `create_all` runs in two places — `init_db.py` (pre-dev) and `main.py` lifespan (idempotent safety net). No Alembic yet.
 - **TDD**: Tests in `apps/api/tests/` using pytest-asyncio.
 - **Skills**: Matt Pocock skills installed in `.claude/skills/`.
 - **Clean Architecture**: Routers → Services → Domain/DB. No DB calls in routers.
+- **RAM**: Keep concurrency ≤ 2. No LangChain/LlamaIndex. Process CV sections sequentially.
