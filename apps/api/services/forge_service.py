@@ -1,0 +1,57 @@
+from __future__ import annotations
+from sqlalchemy.ext.asyncio import AsyncSession
+from db.models import MasterCV, JobDescription, TailoredCV
+from domain.cv_logic.parser import FORGEABLE, split_sections, merge_sections
+from ai.client import OllamaClient
+
+
+async def import_cv(
+    raw_text: str,
+    title: str,
+    ollama: OllamaClient,
+    session: AsyncSession,
+) -> MasterCV:
+    result = await ollama.clean_cv(raw_text)
+    md = result.get("markdown") or raw_text
+    cv = MasterCV(title=title, content_markdown=md)
+    session.add(cv)
+    await session.commit()
+    await session.refresh(cv)
+    return cv
+
+
+async def run_forge(
+    master_cv_id: int,
+    jd_text: str,
+    ollama: OllamaClient,
+    session: AsyncSession,
+) -> TailoredCV:
+    cv = await session.get(MasterCV, master_cv_id)
+    if cv is None:
+        raise ValueError(f"MasterCV {master_cv_id} not found")
+
+    analysis = await ollama.analyze_jd(jd_text)
+    keywords: list[str] = analysis.get("keywords", []) + analysis.get("required_skills", [])
+
+    jd = JobDescription(raw_text=jd_text, extracted_keywords=", ".join(keywords))
+    session.add(jd)
+    await session.flush()
+
+    sections = split_sections(cv.content_markdown)
+    forged: dict[str, str] = {}
+    for title, content in sections.items():
+        if title in FORGEABLE:
+            result = await ollama.forge_section(content, keywords)
+            forged[title] = result.get("rewritten") or content
+        else:
+            forged[title] = content
+
+    tailored = TailoredCV(
+        master_cv_id=master_cv_id,
+        job_desc_id=jd.id,
+        content_markdown=merge_sections(forged),
+    )
+    session.add(tailored)
+    await session.commit()
+    await session.refresh(tailored)
+    return tailored
