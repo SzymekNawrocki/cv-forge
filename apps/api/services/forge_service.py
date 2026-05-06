@@ -1,8 +1,11 @@
 from __future__ import annotations
+import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import MasterCV, JobDescription, TailoredCV
 from domain.cv_logic.parser import FORGEABLE, split_sections, merge_sections
 from ai.client import OllamaClient
+
+logger = logging.getLogger(__name__)
 
 
 async def import_cv(
@@ -52,6 +55,12 @@ async def run_forge(
     tailored_md = merge_sections(forged)
     after_result = await ollama.calculate_match_score(tailored_md, jd_text)
     match_score = float(after_result.get("score", 0))
+
+    if match_score < initial_score:
+        logger.warning(
+            "Score regression: before=%.1f after=%.1f (master_cv_id=%d)",
+            initial_score, match_score, master_cv_id,
+        )
 
     tailored = TailoredCV(
         master_cv_id=master_cv_id,

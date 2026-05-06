@@ -75,7 +75,7 @@ export default function ForgePage() {
           {result && (
             <button
               onClick={handlePrint}
-              className="px-3 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors"
+              className="px-3 py-2 bg-slate-800 text-white text-sm font-medium rounded hover:bg-slate-700 transition-colors"
             >
               Download PDF
             </button>

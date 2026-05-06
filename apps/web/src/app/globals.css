@@ -26,13 +26,17 @@ body {
 }
 
 /* CV preview prose styling */
-.cv-preview h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
-.cv-preview h2 { font-size: 1.1rem; font-weight: 600; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.2rem; margin-top: 1.25rem; margin-bottom: 0.5rem; }
-.cv-preview h3 { font-size: 1rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.15rem; }
-.cv-preview p { margin-bottom: 0.5rem; line-height: 1.6; }
+.cv-preview {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+.cv-preview h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; color: #0f172a !important; }
+.cv-preview h2 { font-size: 1.1rem; font-weight: 600; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.2rem; margin-top: 1.25rem; margin-bottom: 0.5rem; color: #1e293b !important; }
+.cv-preview h3 { font-size: 1rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.15rem; color: #1e293b !important; }
+.cv-preview p { margin-bottom: 0.5rem; line-height: 1.6; color: #1e293b !important; }
 .cv-preview ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
-.cv-preview li { margin-bottom: 0.15rem; line-height: 1.5; }
-.cv-preview strong { font-weight: 600; }
+.cv-preview li { margin-bottom: 0.15rem; line-height: 1.5; color: #1e293b !important; }
+.cv-preview strong { font-weight: 600; color: #0f172a !important; }
 
 /* PDF print — hide everything except #cv-print-area */
 @media print {

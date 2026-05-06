@@ -10,12 +10,12 @@ FORGE_MODEL = "qwen2.5-coder:3b"
 
 
 class OllamaClient:
-    async def _generate_json(self, prompt: str, model: str) -> dict:
+    async def _generate_json(self, prompt: str, model: str, temperature: float | None = None) -> dict:
+        payload: dict = {"model": model, "prompt": prompt, "stream": False, "format": "json"}
+        if temperature is not None:
+            payload["options"] = {"temperature": temperature}
         async with httpx.AsyncClient(timeout=120.0) as client:
-            res = await client.post(
-                f"{OLLAMA_BASE}/api/generate",
-                json={"model": model, "prompt": prompt, "stream": False, "format": "json"},
-            )
+            res = await client.post(f"{OLLAMA_BASE}/api/generate", json=payload)
             res.raise_for_status()
         return _parse_json(res.json()["response"])
 
@@ -35,7 +35,9 @@ class OllamaClient:
 
     async def calculate_match_score(self, cv_text: str, jd_text: str) -> dict:
         return await self._generate_json(
-            MATCH_SCORE_PROMPT.format(cv_text=cv_text, jd_text=jd_text), ANALYSIS_MODEL
+            MATCH_SCORE_PROMPT.format(cv_text=cv_text, jd_text=jd_text),
+            ANALYSIS_MODEL,
+            temperature=0.4,
         )
 
     async def clean_cv(self, raw_text: str) -> dict:

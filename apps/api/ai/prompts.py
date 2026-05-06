@@ -12,8 +12,12 @@ Job Description:
 """
 
 FORGE_SECTION_PROMPT = """\
-Rewrite this CV section to match the target job. Optimize for ATS keywords.
-Keep same structure, professional tone, accurate content — do NOT invent facts.
+Rewrite this CV section to better match the target job. Optimize for ATS keywords.
+CRITICAL RULES:
+- PRESERVE every specific technical skill, tool, language, and framework already in the original. Do NOT remove or omit them.
+- You may rephrase or reorder skills to highlight relevance, but never delete them.
+- Do NOT invent facts, certifications, or experience not in the original.
+- Keep same structure and professional tone.
 Return ONLY valid JSON:
 {{
   "rewritten": "full rewritten section in markdown"
@@ -21,16 +25,22 @@ Return ONLY valid JSON:
 
 Target keywords: {keywords}
 
-Original section:
+Original section (preserve all technical skills listed here):
 {section_content}
 """
 
 MATCH_SCORE_PROMPT = """\
-Compare this CV against this job description. Score match quality 0-100.
+Analytically score how well this CV matches the job description. Be precise, not generous.
+
+Step 1 — List every critical skill/keyword from the job description that is MISSING from the CV.
+Step 2 — Start at 100. Subtract 8 points per missing critical skill (max deduction 80). Subtract 3 points per missing nice-to-have skill.
+Step 3 — Output the final score and the list of missing critical skills.
+
 Return ONLY valid JSON:
 {{
-  "score": 75,
-  "reasoning": "one sentence explanation"
+  "score": 62,
+  "missing_critical": ["Kubernetes", "CI/CD pipelines"],
+  "reasoning": "Missing 2 critical skills from JD"
 }}
 
 Job Description:
