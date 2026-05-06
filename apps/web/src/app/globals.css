@@ -24,3 +24,31 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* CV preview prose styling */
+.cv-preview h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+.cv-preview h2 { font-size: 1.1rem; font-weight: 600; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.2rem; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+.cv-preview h3 { font-size: 1rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.15rem; }
+.cv-preview p { margin-bottom: 0.5rem; line-height: 1.6; }
+.cv-preview ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+.cv-preview li { margin-bottom: 0.15rem; line-height: 1.5; }
+.cv-preview strong { font-weight: 600; }
+
+/* PDF print — hide everything except #cv-print-area */
+@media print {
+  body * { visibility: hidden; }
+  #cv-print-area, #cv-print-area * { visibility: visible; }
+  #cv-print-area {
+    position: absolute;
+    inset: 0;
+    padding: 2cm;
+    font-family: Georgia, serif;
+    font-size: 11pt;
+    color: #000;
+  }
+  #cv-print-area h1 { font-size: 18pt; font-weight: 700; margin-bottom: 4pt; }
+  #cv-print-area h2 { font-size: 13pt; font-weight: 600; border-bottom: 1px solid #000; padding-bottom: 2pt; margin-top: 14pt; margin-bottom: 6pt; }
+  #cv-print-area h3 { font-size: 11pt; font-weight: 600; margin-top: 8pt; }
+  #cv-print-area ul { padding-left: 16pt; }
+  #cv-print-area li { margin-bottom: 2pt; }
+}

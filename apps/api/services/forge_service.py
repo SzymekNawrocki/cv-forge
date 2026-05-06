@@ -37,6 +37,9 @@ async def run_forge(
     session.add(jd)
     await session.flush()
 
+    before_result = await ollama.calculate_match_score(cv.content_markdown, jd_text)
+    initial_score = float(before_result.get("score", 0))
+
     sections = split_sections(cv.content_markdown)
     forged: dict[str, str] = {}
     for title, content in sections.items():
@@ -46,10 +49,16 @@ async def run_forge(
         else:
             forged[title] = content
 
+    tailored_md = merge_sections(forged)
+    after_result = await ollama.calculate_match_score(tailored_md, jd_text)
+    match_score = float(after_result.get("score", 0))
+
     tailored = TailoredCV(
         master_cv_id=master_cv_id,
         job_desc_id=jd.id,
-        content_markdown=merge_sections(forged),
+        content_markdown=tailored_md,
+        initial_match_score=initial_score,
+        match_score=match_score,
     )
     session.add(tailored)
     await session.commit()

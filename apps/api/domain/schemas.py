@@ -32,6 +32,7 @@ class TailoredCVRead(BaseModel):
     master_cv_id: int
     job_desc_id: int
     content_markdown: str
+    initial_match_score: float | None = None
     match_score: float | None = None
 
     model_config = {"from_attributes": True}

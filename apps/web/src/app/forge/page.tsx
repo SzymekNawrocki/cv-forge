@@ -1,7 +1,31 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { fetchMasterCVs, forgeCV, type MasterCV, type TailoredCV } from "@/lib/api";
+
+function ScoreBadge({ label, score }: { label: string; score: number | null }) {
+  if (score === null) return null;
+  const color =
+    score >= 75 ? "bg-green-100 text-green-800 border-green-200" :
+    score >= 50 ? "bg-yellow-100 text-yellow-800 border-yellow-200" :
+                 "bg-red-100 text-red-800 border-red-200";
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-semibold ${color}`}>
+      {label}: {Math.round(score)}%
+    </span>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
+  );
+}
 
 export default function ForgePage() {
   const [cvs, setCVs] = useState<MasterCV[]>([]);
@@ -32,11 +56,30 @@ export default function ForgePage() {
     });
   }
 
+  function handlePrint() {
+    window.print();
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">CV Forge</h1>
         <div className="flex items-center gap-3">
+          {result && (
+            <div className="flex items-center gap-2">
+              <ScoreBadge label="Before" score={result.initial_match_score} />
+              <span className="text-gray-400 text-xs">→</span>
+              <ScoreBadge label="After" score={result.match_score} />
+            </div>
+          )}
+          {result && (
+            <button
+              onClick={handlePrint}
+              className="px-3 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors"
+            >
+              Download PDF
+            </button>
+          )}
           <select
             className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={selectedId}
@@ -50,9 +93,9 @@ export default function ForgePage() {
           <button
             onClick={handleForge}
             disabled={isPending || !selectedId || !jdText.trim()}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isPending ? "Forging…" : "⚡ Forge"}
+            {isPending ? <><Spinner /> Forging…</> : "⚡ Forge"}
           </button>
         </div>
       </div>
@@ -81,13 +124,22 @@ export default function ForgePage() {
             Tailored CV {result ? `(#${result.id})` : ""}
           </label>
           {isPending ? (
-            <div className="flex-1 flex items-center justify-center border border-gray-200 rounded bg-gray-50">
-              <span className="text-sm text-gray-400 animate-pulse">AI is forging your CV…</span>
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 border border-gray-200 rounded bg-gray-50">
+              <svg className="animate-spin h-8 w-8 text-blue-500" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              <span className="text-sm text-gray-400">AI is forging your CV…</span>
             </div>
           ) : result ? (
-            <pre className="flex-1 border border-gray-200 rounded bg-gray-50 px-4 py-3 text-sm font-mono whitespace-pre-wrap overflow-auto">
-              {result.content_markdown}
-            </pre>
+            <div
+              id="cv-print-area"
+              className="cv-preview flex-1 border border-gray-200 rounded bg-white px-6 py-5 text-sm overflow-auto"
+            >
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {result.content_markdown}
+              </ReactMarkdown>
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center border border-dashed border-gray-300 rounded bg-gray-50">
               <span className="text-sm text-gray-400">Result appears here after forging</span>

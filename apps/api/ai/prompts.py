@@ -25,6 +25,21 @@ Original section:
 {section_content}
 """
 
+MATCH_SCORE_PROMPT = """\
+Compare this CV against this job description. Score match quality 0-100.
+Return ONLY valid JSON:
+{{
+  "score": 75,
+  "reasoning": "one sentence explanation"
+}}
+
+Job Description:
+{jd_text}
+
+CV:
+{cv_text}
+"""
+
 CLEAN_CV_PROMPT = """\
 Format this raw CV text into clean Markdown.
 Use # for name, ## for section headers (Summary, Experience, Education, Skills).
