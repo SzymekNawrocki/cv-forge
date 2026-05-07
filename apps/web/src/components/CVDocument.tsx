@@ -125,14 +125,16 @@ const s = StyleSheet.create({
   },
 });
 
-function BoldText({ text, style }: { text: string; style: Styles[string] }) {
+const UNDERLINE_BOLD_SECTIONS = new Set(["PROJECTS", "CERTIFICATIONS"]);
+
+function BoldText({ text, style, underlineBold = false }: { text: string; style: Styles[string]; underlineBold?: boolean }) {
   const cleaned = text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
   const parts = cleaned.split(/(\*\*[^*]+\*\*)/g);
   return (
     <Text style={style}>
       {parts.map((part, i) =>
         part.startsWith("**") && part.endsWith("**") ? (
-          <Text key={i} style={{ fontFamily: "Helvetica-Bold" }}>
+          <Text key={i} style={{ fontFamily: "Helvetica-Bold", ...(underlineBold ? { textDecoration: "underline" } : {}) }}>
             {part.slice(2, -2)}
           </Text>
         ) : (
@@ -156,7 +158,7 @@ function SectionBlock({ section }: { section: CVSection }) {
         section.items?.map((item, i) => (
           <View key={i} style={s.bulletRow}>
             <Text style={s.bulletDot}>{"•"}</Text>
-            <BoldText text={item} style={s.bulletText} />
+            <BoldText text={item} style={s.bulletText} underlineBold={UNDERLINE_BOLD_SECTIONS.has(section.heading)} />
           </View>
         ))}
 
