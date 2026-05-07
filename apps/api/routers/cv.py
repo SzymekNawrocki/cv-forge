@@ -60,3 +60,5 @@ async def forge(
         return await run_forge(body.master_cv_id, body.job_description_text, ollama, session)
     except ValueError as e:
         raise HTTPException(404, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))
