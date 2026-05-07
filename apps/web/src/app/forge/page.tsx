@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import dynamic from "next/dynamic";
 import { fetchMasterCVs, forgeCV, type MasterCV, type TailoredCV } from "@/lib/api";
+import type { CVData } from "@/components/CVDocument";
+
+const CVViewer = dynamic(() => import("@/components/CVViewer"), { ssr: false });
 
 function ScoreBadge({ label, score }: { label: string; score: number | null }) {
   if (score === null) return null;
@@ -25,6 +27,14 @@ function Spinner() {
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
     </svg>
   );
+}
+
+function parseCVData(result: TailoredCV): CVData | null {
+  try {
+    return JSON.parse(result.content_json) as CVData;
+  } catch {
+    return null;
+  }
 }
 
 export default function ForgePage() {
@@ -56,9 +66,7 @@ export default function ForgePage() {
     });
   }
 
-  function handlePrint() {
-    window.print();
-  }
+  const cvData = result ? parseCVData(result) : null;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 flex flex-col gap-6">
@@ -71,14 +79,6 @@ export default function ForgePage() {
               <span className="text-gray-400 text-xs">→</span>
               <ScoreBadge label="After" score={result.match_score} />
             </div>
-          )}
-          {result && (
-            <button
-              onClick={handlePrint}
-              className="px-3 py-2 bg-slate-800 text-white text-sm font-medium rounded hover:bg-slate-700 transition-colors"
-            >
-              Download PDF
-            </button>
           )}
           <select
             className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -106,7 +106,7 @@ export default function ForgePage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-6 min-h-[70vh]">
+      <div className="grid grid-cols-2 gap-6" style={{ minHeight: "75vh" }}>
         <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
             Job Description
@@ -119,7 +119,7 @@ export default function ForgePage() {
           />
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2" style={{ minHeight: 0 }}>
           <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
             Tailored CV {result ? `(#${result.id})` : ""}
           </label>
@@ -131,14 +131,11 @@ export default function ForgePage() {
               </svg>
               <span className="text-sm text-gray-400">AI is forging your CV…</span>
             </div>
+          ) : cvData ? (
+            <CVViewer data={cvData} cvId={result!.id} />
           ) : result ? (
-            <div
-              id="cv-print-area"
-              className="cv-preview flex-1 border border-gray-200 rounded bg-white px-6 py-5 text-sm overflow-auto"
-            >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {result.content_markdown}
-              </ReactMarkdown>
+            <div className="flex-1 flex items-center justify-center border border-red-200 rounded bg-red-50">
+              <span className="text-sm text-red-500">Failed to parse CV data</span>
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center border border-dashed border-gray-300 rounded bg-gray-50">

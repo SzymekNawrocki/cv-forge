@@ -11,7 +11,7 @@ export interface TailoredCV {
   id: number;
   master_cv_id: number;
   job_desc_id: number;
-  content_markdown: string;
+  content_json: string;
   initial_match_score: number | null;
   match_score: number | null;
 }

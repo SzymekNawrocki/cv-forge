@@ -61,3 +61,39 @@ Return ONLY valid JSON:
 Raw CV text:
 {raw_text}
 """
+
+FORMAT_CV_JSON_PROMPT = """\
+Convert this CV markdown into structured JSON for rendering a PDF.
+
+Section type rules:
+- "paragraph": single prose block (About Me, Summary, Profile)
+- "bullets": list items (Skills, Languages, Certifications, Projects)
+- "entries": dated org entries (Work Experience, Education)
+
+For bullets items: preserve **bold:** prefixes exactly as written.
+For entries: extract org name, role/title, date range, and bullet points.
+Contact fields: use empty string "" if not found in the CV.
+
+Return ONLY valid JSON with this exact structure:
+{{
+  "name": "Full Name",
+  "title": "Job Title or empty string",
+  "contact": {{
+    "email": "",
+    "phone": "",
+    "location": "",
+    "portfolio": "",
+    "github": ""
+  }},
+  "sections": [
+    {{"heading": "ABOUT ME", "type": "paragraph", "content": "prose text"}},
+    {{"heading": "SKILLS", "type": "bullets", "items": ["**Category:** value"]}},
+    {{"heading": "WORK EXPERIENCE", "type": "entries", "entries": [
+      {{"org": "COMPANY", "role": "Job Title", "date": "date range", "bullets": ["achievement"]}}
+    ]}}
+  ]
+}}
+
+CV Markdown:
+{cv_markdown}
+"""

@@ -36,7 +36,7 @@ class TailoredCV(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     master_cv_id: Mapped[int] = mapped_column(ForeignKey("master_cvs.id"), nullable=False)
     job_desc_id: Mapped[int] = mapped_column(ForeignKey("job_descriptions.id"), nullable=False)
-    content_markdown: Mapped[str] = mapped_column(Text, nullable=False)
+    content_json: Mapped[str] = mapped_column(Text, nullable=False)
     initial_match_score: Mapped[float | None] = mapped_column(Float)
     match_score: Mapped[float | None] = mapped_column(Float)
 

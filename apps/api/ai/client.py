@@ -2,7 +2,7 @@ from __future__ import annotations
 import json
 import re
 import httpx
-from ai.prompts import ANALYZE_JD_PROMPT, CLEAN_CV_PROMPT, FORGE_SECTION_PROMPT, MATCH_SCORE_PROMPT
+from ai.prompts import ANALYZE_JD_PROMPT, CLEAN_CV_PROMPT, FORMAT_CV_JSON_PROMPT, FORGE_SECTION_PROMPT, MATCH_SCORE_PROMPT
 
 OLLAMA_BASE = "http://localhost:11434"
 ANALYSIS_MODEL = "llama3.2:1b"
@@ -43,6 +43,11 @@ class OllamaClient:
     async def clean_cv(self, raw_text: str) -> dict:
         return await self._generate_json(
             CLEAN_CV_PROMPT.format(raw_text=raw_text), ANALYSIS_MODEL
+        )
+
+    async def format_cv_json(self, cv_markdown: str) -> dict:
+        return await self._generate_json(
+            FORMAT_CV_JSON_PROMPT.format(cv_markdown=cv_markdown), FORGE_MODEL
         )
 
 

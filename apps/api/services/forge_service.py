@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import MasterCV, JobDescription, TailoredCV
@@ -62,10 +63,13 @@ async def run_forge(
             initial_score, match_score, master_cv_id,
         )
 
+    cv_json_result = await ollama.format_cv_json(tailored_md)
+    content_json = json.dumps(cv_json_result)
+
     tailored = TailoredCV(
         master_cv_id=master_cv_id,
         job_desc_id=jd.id,
-        content_markdown=tailored_md,
+        content_json=content_json,
         initial_match_score=initial_score,
         match_score=match_score,
     )
