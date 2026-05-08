@@ -3,6 +3,23 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class SkillCreate(BaseModel):
+    category: str
+    items: list[str]
+
+
+class SkillUpdate(BaseModel):
+    category: str | None = None
+    items: list[str] | None = None
+
+
+class SkillRead(SkillCreate):
+    id: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class MasterCVCreate(BaseModel):
     title: str
     content_markdown: str

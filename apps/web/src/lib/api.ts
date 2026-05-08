@@ -32,6 +32,11 @@ export async function importCV(title: string, raw_text: string): Promise<MasterC
   return res.json();
 }
 
+export async function deleteCV(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/cv/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await res.text());
+}
+
 export async function forgeCV(
   master_cv_id: number,
   job_description_text: string,
@@ -66,6 +71,44 @@ export async function fetchJobs(limit = 50): Promise<Job[]> {
   if (!res.ok) throw new Error("Failed to fetch jobs");
   const data = await res.json();
   return data.jobs as Job[];
+}
+
+export interface Skill {
+  id: number;
+  category: string;
+  items: string[];
+  created_at: string;
+}
+
+export async function fetchSkills(): Promise<Skill[]> {
+  const res = await fetch(`${API_BASE}/skills/`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch skills");
+  return res.json();
+}
+
+export async function createSkill(category: string, items: string[]): Promise<Skill> {
+  const res = await fetch(`${API_BASE}/skills/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ category, items }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function updateSkill(id: number, category: string, items: string[]): Promise<Skill> {
+  const res = await fetch(`${API_BASE}/skills/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ category, items }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function deleteSkill(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/skills/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await res.text());
 }
 
 export async function fetchJob(id: number): Promise<Job> {

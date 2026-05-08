@@ -7,6 +7,7 @@ from db.models import MasterCV, JobDescription, TailoredCV
 from domain.cv_logic.parser import FORGEABLE, split_sections, merge_sections
 from domain.cv_logic.cv_json_builder import build_cv_json
 from ai.client import OllamaClient
+from services.skills_service import build_skills_markdown, list_skills
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,15 @@ async def run_forge(
     existing_keywords = [k for k in keywords if k not in missing_set]
 
     sections = split_sections(cv.content_markdown)
+
+    # If skills DB has entries, replace the Skills section so AI selects from the full list
+    db_skills = await list_skills(session)
+    if db_skills:
+        skills_md = build_skills_markdown(db_skills)
+        # Find the correct key (case-insensitive match)
+        skills_key = next((k for k in sections if k.lower() == "skills"), "Skills")
+        sections[skills_key] = skills_md
+
     forged: dict[str, str] = {}
     for title, content in sections.items():
         if title.lower() in FORGEABLE:

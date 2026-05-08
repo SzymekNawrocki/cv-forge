@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timezone
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from db.base import Base
 
@@ -16,7 +16,19 @@ class MasterCV(Base):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    tailored_cvs: Mapped[list[TailoredCV]] = relationship(back_populates="master_cv")
+    tailored_cvs: Mapped[list[TailoredCV]] = relationship(back_populates="master_cv", cascade="all, delete-orphan")
+
+
+class Skill(Base):
+    __tablename__ = "skills"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    category: Mapped[str] = mapped_column(String(255), nullable=False)
+    items: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
 
 
 class JobDescription(Base):

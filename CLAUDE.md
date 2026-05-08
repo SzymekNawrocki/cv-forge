@@ -27,9 +27,9 @@ apps/api/
 │   └── ollama_client.py        ← Legacy low-level helper (unused, do not delete yet)
 ├── db/
 │   ├── base.py                 ← Async engine, SessionLocal, get_session()
-│   └── models.py               ← MasterCV, JobDescription, TailoredCV
+│   └── models.py               ← MasterCV, JobDescription, TailoredCV, Skill
 ├── domain/
-│   ├── schemas.py              ← Pydantic I/O models
+│   ├── schemas.py              ← Pydantic I/O models (incl. SkillCreate, SkillRead, SkillUpdate)
 │   ├── cv_logic/
 │   │   ├── parser.py           ← split_sections() / merge_sections() on ## headers
 │   │   └── cv_json_builder.py  ← build_cv_json(): Python-based markdown→CVData JSON; calls parse_entries_section for Work Experience only
@@ -39,9 +39,11 @@ apps/api/
 │       └── base.py             ← Scraper base class
 ├── services/
 │   ├── forge_service.py        ← import_cv() (clean_cv → normalize → save), run_forge() orchestration; _normalize_cv_markdown() safety net
+│   ├── skills_service.py       ← list_skills(), create_skill(), update_skill(), delete_skill(), build_skills_markdown()
 │   └── job_service.py          ← Job CRUD helpers
 ├── routers/
 │   ├── cv.py                   ← POST /cv/import, GET /cv/, GET /cv/{id}, POST /cv/forge
+│   ├── skills.py               ← GET /skills/, POST /skills/, PUT /skills/{id}, DELETE /skills/{id}
 │   ├── jobs.py                 ← GET /jobs/, GET /jobs/{id}
 │   ├── search.py               ← POST /search/ (stub)
 │   └── recruiters.py           ← GET /recruiters/ (stub)
@@ -93,9 +95,17 @@ Rules:
 - `_normalize_cv_markdown()` in `forge_service.py` strips `## #→#` and `##  ##→##` as a safety net after `clean_cv`.
 - Education is `bullets` type (not `entries`) — matches original CV's `**Institution:** degree | years` format.
 
+## Skills DB Architecture
+
+`Skill` table: `id`, `category` (str), `items` (JSON array of strings), `created_at`.
+
+- Managed via `/skills` page (CRUD UI: add category + tag list, edit inline, delete).
+- `build_skills_markdown(skills)` in `skills_service.py` converts rows to `- **Category:** item1, item2` format.
+- `MasterCV` markdown remains source of truth for all non-skills sections (About Me, Work Experience, Projects, Education, Languages, Certifications).
+
 ## Forge Loop
 1. `POST /cv/import` — raw text → `clean_cv` (Gemini) → `_normalize_cv_markdown()` → `MasterCV` saved to DB
-2. `POST /cv/forge` — select `MasterCV` + paste JD → `analyze_jd` (Gemini) extracts keywords + `job_title` → `calculate_match_score` (Gemini) scores original CV → `forge_section` (Gemini) rewrites each FORGEABLE section (body only, no `##` heading) → `merge_sections()` reconstructs markdown → `calculate_match_score` (Gemini) scores tailored CV → `build_cv_json()` (Python + Gemini `parse_entries_section` for Work Experience) converts tailored markdown to structured JSON → `TailoredCV` saved with `content_json`, `initial_match_score`, `match_score`
+2. `POST /cv/forge` — select `MasterCV` + paste JD → `analyze_jd` (Gemini) extracts keywords + `job_title` → `calculate_match_score` (Gemini) scores original CV → **if `Skill` rows exist, replace Skills section content with full DB skills list** → `forge_section` (Gemini) rewrites each FORGEABLE section (body only, no `##` heading) → `merge_sections()` reconstructs markdown → `calculate_match_score` (Gemini) scores tailored CV → `build_cv_json()` (Python + Gemini `parse_entries_section` for Work Experience) converts tailored markdown to structured JSON → `TailoredCV` saved with `content_json`, `initial_match_score`, `match_score`
 
 ## Frontend Pages (`apps/web/src/app`)
 | Route | Description |
@@ -103,14 +113,17 @@ Rules:
 | `/` | Job listings |
 | `/jobs/[id]` | Job detail |
 | `/cv-manager` | Import raw CV + browse saved CVs |
-| `/forge` | JD input (left) / PDF preview (right) + Before→After score badges + Download PDF |
+| `/skills` | Skills DB manager — add/edit/delete skill categories with tag-input UI |
+| `/forge` | JD input (left) / PDF preview + inline editor (right) + Before→After score badges + Download PDF |
 
 All API calls go through `src/lib/api.ts`. Client Components only at leaf level.
 
 ## Frontend Dependencies
 - `@react-pdf/renderer` — renders `TailoredCV.content_json` as a real PDF in the browser
-- `CVDocument.tsx` (`src/components/`) — @react-pdf/renderer Document; Helvetica, two-column header, uppercase section dividers. `BoldText` renders `**bold**` markdown; bold text in PROJECTS and CERTIFICATIONS sections is also underlined (`underlineBold` prop, driven by `UNDERLINE_BOLD_SECTIONS` set).
+- `CVDocument.tsx` (`src/components/`) — @react-pdf/renderer Document; **Roboto font** (Latin + Latin Extended — full Polish support: ą ć ę ł ń ó ś ź ż), two-column header with icon boxes, uppercase section dividers. `BoldText` renders `**bold**` markdown; bold text in PROJECTS and CERTIFICATIONS sections is also underlined (`underlineBold` prop, driven by `UNDERLINE_BOLD_SECTIONS` set).
 - `CVViewer.tsx` (`src/components/`) — `"use client"` wrapper with `PDFViewer` (WYSIWYG preview) + `PDFDownloadLink`; dynamically imported with `ssr: false` in forge page
+- Font files: `apps/web/public/fonts/Roboto-{Regular,Bold,Italic,BoldItalic}.ttf` — merged latin + latin-ext subsets via fonttools (Python). Registered via `Font.register()` using `window.location.origin` base URL (safe since CVDocument is browser-only via ssr:false).
+- Forge page has **Preview / Edit tabs** after forge runs — Edit tab shows per-section accordion with textareas that live-update the PDF preview via `editedData` state.
 - `react-markdown` + `remark-gfm` still in deps but no longer used in forge view
 
 ## Dev Startup

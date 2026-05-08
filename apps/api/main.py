@@ -7,14 +7,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from db.base import engine
 from db.models import Base
-from routers import jobs, cv
+from routers import jobs, cv, skills
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    print("🚀 API Ready - Database Connected")
+    print("API Ready - Database Connected")
     yield
 
 
@@ -29,6 +29,7 @@ app.add_middleware(
 
 app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 app.include_router(cv.router, prefix="/cv", tags=["cv"])
+app.include_router(skills.router, prefix="/skills", tags=["skills"])
 
 
 @app.get("/health")

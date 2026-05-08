@@ -3,47 +3,230 @@
 import { useState, useEffect, useTransition } from "react";
 import dynamic from "next/dynamic";
 import { fetchMasterCVs, forgeCV, type MasterCV, type TailoredCV } from "@/lib/api";
-import type { CVData } from "@/components/CVDocument";
+import type { CVData, CVSection } from "@/components/CVDocument";
 
 const CVViewer = dynamic(() => import("@/components/CVViewer"), { ssr: false });
 
+const F = {
+  display: '"Barlow Condensed", sans-serif',
+  body:    '"IBM Plex Sans", sans-serif',
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function scoreColor(s: number)  { return s >= 75 ? '#4ADE80' : s >= 50 ? '#FF8C42' : '#F87171'; }
+function scoreBg(s: number)     { return s >= 75 ? 'rgba(74,222,128,0.08)' : s >= 50 ? 'rgba(255,140,66,0.08)' : 'rgba(248,113,113,0.08)'; }
+function scoreBorder(s: number) { return s >= 75 ? 'rgba(74,222,128,0.22)' : s >= 50 ? 'rgba(255,140,66,0.22)' : 'rgba(248,113,113,0.22)'; }
+
 function ScoreBadge({ label, score }: { label: string; score: number | null }) {
   if (score === null) return null;
-  const color =
-    score >= 75 ? "bg-green-100 text-green-800 border-green-200" :
-    score >= 50 ? "bg-yellow-100 text-yellow-800 border-yellow-200" :
-                 "bg-red-100 text-red-800 border-red-200";
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-semibold ${color}`}>
-      {label}: {Math.round(score)}%
-    </span>
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      padding: '8px 16px',
+      background: scoreBg(score), border: `1px solid ${scoreBorder(score)}`,
+      borderRadius: '8px', minWidth: '72px',
+    }}>
+      <span style={{ fontFamily: F.display, fontSize: '28px', fontWeight: 800, letterSpacing: '0.04em', color: scoreColor(score), lineHeight: 1 }}>
+        {Math.round(score)}
+      </span>
+      <span style={{ fontFamily: F.body, fontSize: '10px', fontWeight: 500, letterSpacing: '0.10em', textTransform: 'uppercase' as const, color: '#7A7A84', marginTop: '3px' }}>
+        {label}
+      </span>
+    </div>
   );
 }
 
-function Spinner() {
+function ForgeSpinner({ size = 16 }: { size?: number }) {
   return (
-    <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-    </svg>
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      border: `${size <= 20 ? 2 : 3}px solid rgba(255,87,34,0.25)`,
+      borderTopColor: '#FF5722',
+      animation: 'forge-spin 0.75s linear infinite',
+      boxShadow: size > 20 ? '0 0 16px rgba(255,87,34,0.28)' : 'none',
+      flexShrink: 0,
+    }} />
   );
 }
 
 function parseCVData(result: TailoredCV): CVData | null {
-  try {
-    return JSON.parse(result.content_json) as CVData;
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(result.content_json) as CVData; }
+  catch { return null; }
 }
+
+// ── Section Editor ────────────────────────────────────────────────────────────
+
+function SectionEditor({
+  section,
+  onChange,
+}: {
+  section: CVSection;
+  onChange: (updated: CVSection) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  function updateParagraph(content: string) {
+    onChange({ ...section, content });
+  }
+
+  function updateBullets(raw: string) {
+    const items = raw.split("\n").map((l) => l.replace(/^[-•]\s*/, "").trim()).filter(Boolean);
+    onChange({ ...section, items });
+  }
+
+  function updateEntryBullets(entryIdx: number, raw: string) {
+    const bullets = raw.split("\n").map((l) => l.replace(/^[-•]\s*/, "").trim()).filter(Boolean);
+    const entries = section.entries!.map((e, i) => i === entryIdx ? { ...e, bullets } : e);
+    onChange({ ...section, entries });
+  }
+
+  const preview =
+    section.type === "paragraph"
+      ? (section.content ?? "").slice(0, 80) + "..."
+      : section.type === "bullets"
+      ? `${section.items?.length ?? 0} items`
+      : `${section.entries?.length ?? 0} entries`;
+
+  return (
+    <div style={{ borderBottom: '1px solid #1E1E20' }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <span style={{ fontFamily: F.display, fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: '#B0BEC5' }}>
+          {section.heading}
+        </span>
+        <span style={{ fontFamily: F.body, fontSize: '10px', color: '#5C5C66' }}>
+          {open ? '▲' : '▼'} {!open && preview}
+        </span>
+      </button>
+
+      {open && (
+        <div style={{ paddingBottom: '12px' }}>
+          {section.type === 'paragraph' && (
+            <textarea
+              value={section.content ?? ''}
+              onChange={(e) => updateParagraph(e.target.value)}
+              rows={5}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: '#0D0D0E', border: '1px solid #222224', borderRadius: '5px',
+                padding: '8px 10px', fontFamily: F.body, fontSize: '12px',
+                color: '#B0BEC5', resize: 'vertical', outline: 'none', lineHeight: 1.6,
+              }}
+            />
+          )}
+
+          {section.type === 'bullets' && (
+            <textarea
+              value={(section.items ?? []).join('\n')}
+              onChange={(e) => updateBullets(e.target.value)}
+              rows={Math.max(4, (section.items ?? []).length + 1)}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: '#0D0D0E', border: '1px solid #222224', borderRadius: '5px',
+                padding: '8px 10px', fontFamily: F.body, fontSize: '12px',
+                color: '#B0BEC5', resize: 'vertical', outline: 'none', lineHeight: 1.6,
+              }}
+            />
+          )}
+
+          {section.type === 'entries' && section.entries?.map((entry, i) => (
+            <div key={i} style={{ marginBottom: '10px' }}>
+              <div style={{ fontFamily: F.body, fontSize: '11px', color: '#7A7A84', marginBottom: '4px' }}>
+                <strong style={{ color: '#B0BEC5' }}>{entry.org}</strong> — {entry.role} — {entry.date}
+              </div>
+              <textarea
+                value={entry.bullets.join('\n')}
+                onChange={(e) => updateEntryBullets(i, e.target.value)}
+                rows={Math.max(2, entry.bullets.length + 1)}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: '#0D0D0E', border: '1px solid #222224', borderRadius: '5px',
+                  padding: '8px 10px', fontFamily: F.body, fontSize: '12px',
+                  color: '#B0BEC5', resize: 'vertical', outline: 'none', lineHeight: 1.6,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CVEditor({ data, onChange }: { data: CVData; onChange: (d: CVData) => void }) {
+  function updateSection(idx: number, updated: CVSection) {
+    const sections = data.sections.map((s, i) => i === idx ? updated : s);
+    onChange({ ...data, sections });
+  }
+
+  function updateField(field: keyof CVData, value: string) {
+    onChange({ ...data, [field]: value });
+  }
+
+  function updateContact(field: keyof CVData['contact'], value: string) {
+    onChange({ ...data, contact: { ...data.contact, [field]: value } });
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+      {/* Header fields */}
+      <div style={{ borderBottom: '1px solid #1E1E20', paddingBottom: '12px', marginBottom: '4px' }}>
+        <div style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: '#5C5C66', marginBottom: '8px' }}>
+          Header
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          {[
+            { label: 'Name', field: 'name' as keyof CVData, val: data.name },
+            { label: 'Title', field: 'title' as keyof CVData, val: data.title },
+          ].map(({ label, field, val }) => (
+            <div key={field}>
+              <div style={{ fontFamily: F.body, fontSize: '10px', color: '#5C5C66', marginBottom: '3px' }}>{label}</div>
+              <input
+                value={val as string}
+                onChange={(e) => updateField(field, e.target.value)}
+                style={{ width: '100%', boxSizing: 'border-box', background: '#0D0D0E', border: '1px solid #222224', borderRadius: '4px', padding: '5px 8px', fontFamily: F.body, fontSize: '12px', color: '#E2E2E4', outline: 'none' }}
+              />
+            </div>
+          ))}
+          {(['email', 'phone', 'portfolio', 'github', 'location'] as const).map((f) => (
+            <div key={f}>
+              <div style={{ fontFamily: F.body, fontSize: '10px', color: '#5C5C66', marginBottom: '3px', textTransform: 'capitalize' as const }}>{f}</div>
+              <input
+                value={data.contact[f] ?? ''}
+                onChange={(e) => updateContact(f, e.target.value)}
+                style={{ width: '100%', boxSizing: 'border-box', background: '#0D0D0E', border: '1px solid #222224', borderRadius: '4px', padding: '5px 8px', fontFamily: F.body, fontSize: '12px', color: '#E2E2E4', outline: 'none' }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Sections */}
+      {data.sections.map((section, i) => (
+        <SectionEditor key={i} section={section} onChange={(u) => updateSection(i, u)} />
+      ))}
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ForgePage() {
   const [cvs, setCVs] = useState<MasterCV[]>([]);
   const [selectedId, setSelectedId] = useState<number | "">("");
   const [jdText, setJdText] = useState("");
   const [result, setResult] = useState<TailoredCV | null>(null);
+  const [editedData, setEditedData] = useState<CVData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [btnHovered, setBtnHovered] = useState(false);
+  const [rightTab, setRightTab] = useState<'preview' | 'edit'>('preview');
 
   useEffect(() => {
     fetchMasterCVs().then((data) => {
@@ -56,90 +239,180 @@ export default function ForgePage() {
     if (!selectedId || !jdText.trim()) return;
     setError(null);
     setResult(null);
+    setEditedData(null);
     startTransition(async () => {
       try {
         const tailored = await forgeCV(Number(selectedId), jdText.trim());
         setResult(tailored);
+        setRightTab('preview');
+        const parsed = parseCVData(tailored);
+        if (parsed) setEditedData(parsed);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Forge failed");
       }
     });
   }
 
-  const cvData = result ? parseCVData(result) : null;
+  const cvData = editedData ?? (result ? parseCVData(result) : null);
+  const disabled = isPending || !selectedId || !jdText.trim();
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-10 flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">CV Forge</h1>
-        <div className="flex items-center gap-3">
+    <main style={{
+      flex: 1, display: 'flex', flexDirection: 'column',
+      padding: '24px 32px 24px', gap: '18px',
+      background: '#0D0D0E', minHeight: 0,
+    }}>
+
+      {/* ── Header bar ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ fontFamily: F.display, fontSize: '28px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#E2E2E4', margin: 0, lineHeight: 1 }}>
+            FORGE<span style={{ color: '#FF5722' }}> /</span>
+          </h1>
+          <p style={{ fontFamily: F.body, fontSize: '12px', color: '#7A7A84', margin: '5px 0 0 0' }}>
+            Paste a job description and ignite the AI to surgically rewrite your CV
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {result && (
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <ScoreBadge label="Before" score={result.initial_match_score} />
-              <span className="text-gray-400 text-xs">→</span>
+              <span style={{ color: '#3A3A3E', fontSize: '16px' }}>→</span>
               <ScoreBadge label="After" score={result.match_score} />
             </div>
           )}
-          <select
-            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={selectedId}
-            onChange={(e) => setSelectedId(Number(e.target.value))}
-          >
-            {cvs.length === 0 && <option value="">No CVs — import one first</option>}
-            {cvs.map((cv) => (
-              <option key={cv.id} value={cv.id}>{cv.title}</option>
-            ))}
-          </select>
+
+          {/* CV selector */}
+          <div style={{ position: 'relative' }}>
+            <select
+              style={{ appearance: 'none', WebkitAppearance: 'none', background: '#161618', border: '1px solid #272729', borderRadius: '6px', padding: '9px 36px 9px 12px', fontFamily: F.body, fontSize: '13px', color: '#E2E2E4', cursor: 'pointer', outline: 'none', minWidth: '180px' }}
+              value={selectedId}
+              onChange={(e) => setSelectedId(Number(e.target.value))}
+            >
+              {cvs.length === 0 && <option value="">No CVs — import first</option>}
+              {cvs.map((cv) => (
+                <option key={cv.id} value={cv.id} style={{ background: '#161618', color: '#E2E2E4' }}>{cv.title}</option>
+              ))}
+            </select>
+            <span style={{ position: 'absolute', right: '11px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#7A7A84', fontSize: '11px' }}>▾</span>
+          </div>
+
+          {/* Forge button */}
           <button
             onClick={handleForge}
-            disabled={isPending || !selectedId || !jdText.trim()}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            onMouseEnter={() => setBtnHovered(true)}
+            onMouseLeave={() => setBtnHovered(false)}
+            disabled={disabled}
+            style={{
+              position: 'relative', display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '10px 22px',
+              background: disabled ? '#1A1A1C' : btnHovered ? 'linear-gradient(135deg, #FF8C42, #FFC947)' : 'linear-gradient(135deg, #FF5722, #FF8C42)',
+              border: `1px solid ${disabled ? '#272729' : 'transparent'}`,
+              borderRadius: '6px', cursor: disabled ? 'not-allowed' : 'pointer',
+              fontFamily: F.display, fontSize: '14px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+              color: disabled ? '#3A3A3E' : btnHovered ? '#0D0D0E' : '#fff',
+              boxShadow: !disabled && btnHovered ? '0 0 28px rgba(255,200,70,0.30), 0 0 12px rgba(255,140,66,0.45), 0 4px 14px rgba(255,87,34,0.25)' : !disabled ? '0 0 10px rgba(255,87,34,0.18), 0 2px 8px rgba(0,0,0,0.40)' : 'none',
+              transition: 'all 0.20s cubic-bezier(0.25,0.46,0.45,0.94)', overflow: 'hidden',
+            }}
           >
-            {isPending ? <><Spinner /> Forging…</> : "⚡ Forge"}
+            {!disabled && btnHovered && (
+              <span style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent)', animation: 'forge-sheen 0.50s ease-out 1', pointerEvents: 'none' }} />
+            )}
+            {isPending && <ForgeSpinner size={15} />}
+            <span style={{ position: 'relative' }}>{isPending ? 'Forging...' : '⚡ Forge'}</span>
           </button>
         </div>
       </div>
 
+      {/* ── Error banner ── */}
       {error && (
-        <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div style={{ padding: '12px 16px', background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.20)', borderRadius: '7px', fontFamily: F.body, fontSize: '13px', color: '#F87171' }}>
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-6" style={{ minHeight: "75vh" }}>
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+      {/* ── Two-column layout ── */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', minHeight: 0 }}>
+
+        {/* Left: JD input */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#5C5C66' }}>
             Job Description
           </label>
           <textarea
-            className="flex-1 border border-gray-300 rounded px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            placeholder="Paste the full job description here…"
+            className="forge-input"
+            style={{ flex: 1, background: '#161618', border: '1px solid #222224', borderRadius: '7px', padding: '14px 16px', fontFamily: F.body, fontSize: '13px', color: '#B0BEC5', resize: 'none', outline: 'none', lineHeight: 1.75 }}
+            placeholder="Paste the full job description here..."
             value={jdText}
             onChange={(e) => setJdText(e.target.value)}
           />
         </div>
 
-        <div className="flex flex-col gap-2" style={{ minHeight: 0 }}>
-          <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Tailored CV {result ? `(#${result.id})` : ""}
-          </label>
+        {/* Right: CV output + editor */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 0 }}>
+
+          {/* Tab bar (shown only after result) */}
+          {cvData && (
+            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              {(['preview', 'edit'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setRightTab(tab)}
+                  style={{
+                    padding: '5px 14px',
+                    background: rightTab === tab ? '#1E1E20' : 'none',
+                    border: `1px solid ${rightTab === tab ? '#2A2A2C' : 'transparent'}`,
+                    borderRadius: '5px',
+                    fontFamily: F.display,
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase' as const,
+                    color: rightTab === tab ? '#E2E2E4' : '#5C5C66',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {tab}
+                </button>
+              ))}
+              <span style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#5C5C66', marginLeft: 'auto' }}>
+                Tailored CV{result ? ` — #${result.id}` : ''}
+              </span>
+            </div>
+          )}
+
+          {!cvData && (
+            <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#5C5C66' }}>
+              Tailored CV
+            </label>
+          )}
+
           {isPending ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3 border border-gray-200 rounded bg-gray-50">
-              <svg className="animate-spin h-8 w-8 text-blue-500" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-              </svg>
-              <span className="text-sm text-gray-400">AI is forging your CV…</span>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', background: '#161618', border: '1px solid rgba(255,87,34,0.18)', borderRadius: '7px' }}>
+              <ForgeSpinner size={36} />
+              <span style={{ fontFamily: F.body, fontSize: '13px', color: '#7A7A84' }}>AI is forging your CV...</span>
             </div>
           ) : cvData ? (
-            <CVViewer data={cvData} cvId={result!.id} />
+            <>
+              {rightTab === 'preview' && (
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <CVViewer data={cvData} cvId={result!.id} />
+                </div>
+              )}
+              {rightTab === 'edit' && (
+                <div style={{ flex: 1, overflowY: 'auto', background: '#161618', border: '1px solid #222224', borderRadius: '7px', padding: '16px' }}>
+                  <CVEditor data={cvData} onChange={setEditedData} />
+                </div>
+              )}
+            </>
           ) : result ? (
-            <div className="flex-1 flex items-center justify-center border border-red-200 rounded bg-red-50">
-              <span className="text-sm text-red-500">Failed to parse CV data</span>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.18)', borderRadius: '7px' }}>
+              <span style={{ fontFamily: F.body, fontSize: '13px', color: '#F87171' }}>Failed to parse CV data</span>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center border border-dashed border-gray-300 rounded bg-gray-50">
-              <span className="text-sm text-gray-400">Result appears here after forging</span>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#161618', border: '1px dashed #1E1E20', borderRadius: '7px' }}>
+              <span style={{ fontFamily: F.body, fontSize: '13px', color: '#3A3A3E' }}>Result appears here after forging</span>
             </div>
           )}
         </div>
