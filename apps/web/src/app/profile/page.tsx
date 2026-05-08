@@ -28,7 +28,7 @@ const labelStyle = {
   fontWeight: 700,
   letterSpacing: '0.14em',
   textTransform: 'uppercase' as const,
-  color: '#5C5C66',
+  color: '#9A9AA4',
   marginBottom: '6px',
   display: 'block',
 };
@@ -164,13 +164,13 @@ export default function ProfilePage() {
         }}>
           PROFILE<span style={{ color: '#FF5722' }}> /</span> SETTINGS
         </h1>
-        <p style={{ fontFamily: F.body, fontSize: '13px', color: '#7A7A84', marginTop: '6px' }}>
+        <p style={{ fontFamily: F.body, fontSize: '13px', color: '#A8A8B4', marginTop: '6px' }}>
           Global defaults auto-filled when creating a new CV. Links appear in every tailored PDF.
         </p>
       </div>
 
       {!loaded ? (
-        <p style={{ fontFamily: F.body, fontSize: '13px', color: '#5C5C66' }}>Loading...</p>
+        <p style={{ fontFamily: F.body, fontSize: '13px', color: '#9A9AA4' }}>Loading...</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <SectionLabel>Identity</SectionLabel>
@@ -243,7 +243,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
       fontWeight: 700,
       letterSpacing: '0.18em',
       textTransform: 'uppercase',
-      color: '#3A3A3E',
+      color: '#5C5C70',
     }}>
       {children}
     </div>

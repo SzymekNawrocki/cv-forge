@@ -40,7 +40,7 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.14em',
   textTransform: 'uppercase',
-  color: '#5C5C66',
+  color: '#9A9AA4',
   display: 'block',
   marginBottom: '5px',
 };
@@ -95,7 +95,7 @@ function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
         fontWeight: 700,
         letterSpacing: '0.12em',
         textTransform: 'uppercase',
-        color: '#5C5C66',
+        color: '#9A9AA4',
         cursor: 'pointer',
         transition: 'all 0.18s ease',
       }}
@@ -116,7 +116,7 @@ function RemoveBtn({ onClick }: { onClick: () => void }) {
         padding: '4px 8px',
         background: 'transparent',
         border: 'none',
-        color: '#3A3A3E',
+        color: '#5C5C70',
         fontSize: '16px',
         cursor: 'pointer',
         lineHeight: 1,
@@ -226,7 +226,7 @@ function SkillCategoryRow({
             <button
               type="button"
               onClick={() => removeItem(item)}
-              style={{ background: 'none', border: 'none', color: '#5C5C66', cursor: 'pointer', lineHeight: 1, padding: '0 2px', fontSize: '13px' }}
+              style={{ background: 'none', border: 'none', color: '#9A9AA4', cursor: 'pointer', lineHeight: 1, padding: '0 2px', fontSize: '13px' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#F87171'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#5C5C66'; }}
             >×</button>
@@ -261,7 +261,7 @@ function BulletListEditor({
       <label style={labelStyle}>Bullets</label>
       {bullets.map((b, i) => (
         <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <span style={{ color: '#5C5C66', fontFamily: F.mono, fontSize: '11px', flexShrink: 0 }}>–</span>
+          <span style={{ color: '#9A9AA4', fontFamily: F.mono, fontSize: '11px', flexShrink: 0 }}>–</span>
           <input
             className="forge-input"
             style={{ ...inputStyle, flex: 1 }}

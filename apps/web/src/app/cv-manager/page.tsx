@@ -156,7 +156,7 @@ export default function CVManagerPage() {
           fontWeight: 700,
           letterSpacing: '0.16em',
           textTransform: 'uppercase',
-          color: '#5C5C66',
+          color: '#C4C4CC',
           marginBottom: '10px',
           paddingLeft: '2px',
         }}>
@@ -164,7 +164,7 @@ export default function CVManagerPage() {
         </p>
 
         {cvs.length === 0 && (
-          <p style={{ fontFamily: F.body, fontSize: '13px', color: '#3A3A3E', paddingLeft: '2px' }}>
+          <p style={{ fontFamily: F.body, fontSize: '13px', color: '#5C5C70', paddingLeft: '2px' }}>
             No CVs yet.
           </p>
         )}
@@ -213,7 +213,7 @@ export default function CVManagerPage() {
                   fontWeight: 700,
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
-                  color: '#5C5C66',
+                  color: '#C4C4CC',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                 }}
@@ -238,14 +238,14 @@ export default function CVManagerPage() {
                       ↗ Portfolio
                     </a>
                   ) : (
-                    <span style={{ fontFamily: F.body, fontSize: '12px', color: '#3A3A3E' }}>No portfolio</span>
+                    <span style={{ fontFamily: F.body, fontSize: '12px', color: '#5C5C70' }}>No portfolio</span>
                   )}
                   {selected.github_url ? (
                     <a href={selected.github_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: F.body, fontSize: '12px', color: '#FF5722', textDecoration: 'none' }}>
                       ↗ GitHub
                     </a>
                   ) : (
-                    <span style={{ fontFamily: F.body, fontSize: '12px', color: '#3A3A3E' }}>No GitHub</span>
+                    <span style={{ fontFamily: F.body, fontSize: '12px', color: '#5C5C70' }}>No GitHub</span>
                   )}
                 </div>
                 <button
@@ -260,7 +260,7 @@ export default function CVManagerPage() {
                     fontWeight: 700,
                     letterSpacing: '0.1em',
                     textTransform: 'uppercase',
-                    color: '#5C5C66',
+                    color: '#C4C4CC',
                     cursor: 'pointer',
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = '#E2E2E4'; }}
@@ -274,7 +274,7 @@ export default function CVManagerPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <div>
-                      <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#5C5C66', display: 'block', marginBottom: '5px' }}>
+                      <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C4C4CC', display: 'block', marginBottom: '5px' }}>
                         Portfolio URL
                       </label>
                       <input
@@ -286,7 +286,7 @@ export default function CVManagerPage() {
                       />
                     </div>
                     <div>
-                      <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#5C5C66', display: 'block', marginBottom: '5px' }}>
+                      <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C4C4CC', display: 'block', marginBottom: '5px' }}>
                         GitHub URL
                       </label>
                       <input
@@ -330,7 +330,7 @@ export default function CVManagerPage() {
               padding: '18px 20px',
               fontFamily: F.mono,
               fontSize: '12px',
-              color: '#9A9AA4',
+              color: '#C4C4CC',
               whiteSpace: 'pre-wrap',
               overflowY: 'auto',
               maxHeight: '55vh',
@@ -387,7 +387,7 @@ export default function CVManagerPage() {
             {tab === 'import' ? (
               /* ── Import tab ── */
               <>
-                <p style={{ fontFamily: F.body, fontSize: '13px', color: '#7A7A84', margin: 0 }}>
+                <p style={{ fontFamily: F.body, fontSize: '13px', color: '#A8A8B4', margin: 0 }}>
                   Paste raw CV text — AI will clean and structure it into Markdown.
                 </p>
 
@@ -405,7 +405,7 @@ export default function CVManagerPage() {
                     ...inputStyle,
                     fontFamily: F.mono,
                     fontSize: '12px',
-                    color: '#9A9AA4',
+                    color: '#C4C4CC',
                     resize: 'vertical',
                     lineHeight: 1.75,
                     minHeight: '280px',
@@ -418,7 +418,7 @@ export default function CVManagerPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
-                    <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#5C5C66', display: 'block', marginBottom: '5px' }}>
+                    <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C4C4CC', display: 'block', marginBottom: '5px' }}>
                       Portfolio URL
                     </label>
                     <input
@@ -430,7 +430,7 @@ export default function CVManagerPage() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#5C5C66', display: 'block', marginBottom: '5px' }}>
+                    <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C4C4CC', display: 'block', marginBottom: '5px' }}>
                       GitHub URL
                     </label>
                     <input
