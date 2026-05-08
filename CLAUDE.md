@@ -164,8 +164,13 @@ All API calls go through `src/lib/api.ts`. Client Components only at leaf level.
 Turbo config: `--concurrency=3` (2 persistent tasks require ≥3), `init-db` task is non-persistent/no-cache, `dev` task `dependsOn: ["init-db"]`.
 
 ## Development Rules
-- **Gemini SDK**: Use `google-genai` (not the deprecated `google-generativeai`). Import: `from google import genai`. Model: `gemini-2.5-flash` (free tier, 15 RPM — sufficient for single-user forge). Fall back to `gemini-2.5-flash-lite` (30 RPM) only if rate limits are a problem.
-- **JSON Only**: All Gemini calls use `response_mime_type="application/json"`. Parse with `_parse_json()` in `ai/client.py`.
+- **AI Provider Cascade**: All AI calls go through `GeminiClient._generate_json()` which tries providers in order on 429 rate-limit errors:
+  1. `gemini-2.5-flash` — primary (15 RPM free tier)
+  2. `gemini-2.5-flash-lite` — intermediate (30 RPM free tier, same Gemini key)
+  3. `groq/llama-3.3-70b-versatile` — final fallback (30 RPM free tier, requires `GROQ_API_KEY` in `.env`, free key at console.groq.com)
+- **Gemini SDK**: Use `google-genai` (not the deprecated `google-generativeai`). Import: `from google import genai`.
+- **Groq SDK**: `groq>=0.9.0` — `AsyncGroq` client, `response_format={"type": "json_object"}` for JSON mode.
+- **JSON Only**: Gemini calls use `response_mime_type="application/json"`; Groq calls use `response_format={"type": "json_object"}`. Parse with `_parse_json()` in `ai/client.py`.
 - **DB init**: `create_all` runs in two places — `init_db.py` (pre-dev) and `main.py` lifespan (idempotent safety net). No Alembic yet. New columns on existing tables are added via `ALTER TABLE … ADD COLUMN IF NOT EXISTS` in both places (idempotent — safe to run repeatedly).
 - **TDD**: Tests in `apps/api/tests/` using pytest-asyncio.
 - **Skills**: Matt Pocock skills installed in `.claude/skills/`.
