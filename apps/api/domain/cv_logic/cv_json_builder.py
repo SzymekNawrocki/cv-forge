@@ -53,10 +53,21 @@ def _extract_header(header_text: str) -> tuple[str, str, dict]:
     }
 
 
-async def build_cv_json(cv_markdown: str, client) -> dict:
+async def build_cv_json(
+    cv_markdown: str,
+    client,
+    github_url: str | None = None,
+    portfolio_url: str | None = None,
+) -> dict:
     sections_map = split_sections(cv_markdown)
     header_text = sections_map.get("header", "")
     name, title, contact = _extract_header(header_text)
+
+    # Prefer explicit DB-stored links over regex extraction from markdown
+    if github_url:
+        contact["github"] = github_url
+    if portfolio_url:
+        contact["portfolio"] = portfolio_url
 
     result_sections = []
     for sec_title, content in sections_map.items():

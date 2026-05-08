@@ -5,12 +5,31 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from db.base import Base
 
 
+class UserProfile(Base):
+    __tablename__ = "user_profile"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str | None] = mapped_column(String(255))
+    job_title: Mapped[str | None] = mapped_column(String(255))
+    email: Mapped[str | None] = mapped_column(String(255))
+    phone: Mapped[str | None] = mapped_column(String(50))
+    location: Mapped[str | None] = mapped_column(String(255))
+    github_url: Mapped[str | None] = mapped_column(String(500))
+    portfolio_url: Mapped[str | None] = mapped_column(String(500))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
 class MasterCV(Base):
     __tablename__ = "master_cvs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content_markdown: Mapped[str] = mapped_column(Text, nullable=False)
+    github_url: Mapped[str | None] = mapped_column(String(500))
+    portfolio_url: Mapped[str | None] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

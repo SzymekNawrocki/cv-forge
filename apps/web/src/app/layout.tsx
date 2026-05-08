@@ -88,6 +88,7 @@ export default function RootLayout({
             <a href="/cv-manager" className="forge-nav-link">CV Manager</a>
             <a href="/skills" className="forge-nav-link">Skills</a>
             <a href="/forge" className="forge-nav-link">Forge</a>
+            <a href="/profile" className="forge-nav-link">Profile</a>
           </div>
         </nav>
         {children}
