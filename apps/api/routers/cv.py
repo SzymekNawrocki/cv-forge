@@ -40,11 +40,14 @@ async def cv_import(
     session: AsyncSession = Depends(get_session),
     ollama: OllamaClient = Depends(_ollama),
 ):
-    return await import_cv(
-        body.raw_text, body.title, ollama, session,
-        github_url=body.github_url,
-        portfolio_url=body.portfolio_url,
-    )
+    try:
+        return await import_cv(
+            body.raw_text, body.title, ollama, session,
+            github_url=body.github_url,
+            portfolio_url=body.portfolio_url,
+        )
+    except Exception as e:
+        raise HTTPException(500, str(e) or repr(e))
 
 
 @router.post("/create", response_model=MasterCVRead)
@@ -52,7 +55,10 @@ async def cv_create(
     body: CVFormData,
     session: AsyncSession = Depends(get_session),
 ):
-    return await create_cv_from_form(body, session)
+    try:
+        return await create_cv_from_form(body, session)
+    except Exception as e:
+        raise HTTPException(500, str(e) or repr(e))
 
 
 @router.get("/", response_model=list[MasterCVRead])
