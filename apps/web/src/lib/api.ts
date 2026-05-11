@@ -1,4 +1,5 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
 
 export class APIError extends Error {
   constructor(
@@ -13,7 +14,19 @@ export class APIError extends Error {
   get isServerError() { return this.status >= 500; }
 }
 
-async function handleResponse(res: Response): Promise<Response> {
+async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const authHeaders: Record<string, string> = API_KEY
+    ? { Authorization: `Bearer ${API_KEY}` }
+    : {};
+
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      ...authHeaders,
+      ...(options.headers as Record<string, string> ?? {}),
+    },
+  });
+
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new APIError(res.status, body || res.statusText);
@@ -106,8 +119,7 @@ export interface CVFormData {
 }
 
 export async function fetchMasterCVs(): Promise<MasterCV[]> {
-  const res = await fetch(`${API_BASE}/cv/`, { cache: "no-store" });
-  await handleResponse(res);
+  const res = await apiFetch(`${API_BASE}/cv/`, { cache: "no-store" });
   return res.json();
 }
 
@@ -117,22 +129,20 @@ export async function importCV(
   github_url?: string,
   portfolio_url?: string,
 ): Promise<MasterCV> {
-  const res = await fetch(`${API_BASE}/cv/import`, {
+  const res = await apiFetch(`${API_BASE}/cv/import`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title, raw_text, github_url: github_url || null, portfolio_url: portfolio_url || null }),
   });
-  await handleResponse(res);
   return res.json();
 }
 
 export async function createCV(data: CVFormData): Promise<MasterCV> {
-  const res = await fetch(`${API_BASE}/cv/create`, {
+  const res = await apiFetch(`${API_BASE}/cv/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  await handleResponse(res);
   return res.json();
 }
 
@@ -141,46 +151,41 @@ export async function updateCVLinks(
   github_url: string | null,
   portfolio_url: string | null,
 ): Promise<MasterCV> {
-  const res = await fetch(`${API_BASE}/cv/${id}/links`, {
+  const res = await apiFetch(`${API_BASE}/cv/${id}/links`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ github_url, portfolio_url }),
   });
-  await handleResponse(res);
   return res.json();
 }
 
 export async function deleteCV(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/cv/${id}`, { method: "DELETE" });
-  await handleResponse(res);
+  await apiFetch(`${API_BASE}/cv/${id}`, { method: "DELETE" });
 }
 
 export async function forgeCV(
   master_cv_id: number,
   job_description_text: string,
 ): Promise<TailoredCV> {
-  const res = await fetch(`${API_BASE}/cv/forge`, {
+  const res = await apiFetch(`${API_BASE}/cv/forge`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ master_cv_id, job_description_text }),
   });
-  await handleResponse(res);
   return res.json();
 }
 
 export async function getProfile(): Promise<UserProfile> {
-  const res = await fetch(`${API_BASE}/profile/`, { cache: "no-store" });
-  await handleResponse(res);
+  const res = await apiFetch(`${API_BASE}/profile/`, { cache: "no-store" });
   return res.json();
 }
 
 export async function updateProfile(data: Partial<UserProfile>): Promise<UserProfile> {
-  const res = await fetch(`${API_BASE}/profile/`, {
+  const res = await apiFetch(`${API_BASE}/profile/`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  await handleResponse(res);
   return res.json();
 }
 
@@ -199,10 +204,9 @@ export interface Job {
 }
 
 export async function fetchJobs(limit = 50): Promise<Job[]> {
-  const res = await fetch(`${API_BASE}/jobs/?limit=${limit}`, {
+  const res = await apiFetch(`${API_BASE}/jobs/?limit=${limit}`, {
     next: { revalidate: 60 },
-  });
-  await handleResponse(res);
+  } as RequestInit);
   const data = await res.json();
   return data.jobs as Job[];
 }
@@ -215,40 +219,35 @@ export interface Skill {
 }
 
 export async function fetchSkills(): Promise<Skill[]> {
-  const res = await fetch(`${API_BASE}/skills/`, { cache: "no-store" });
-  await handleResponse(res);
+  const res = await apiFetch(`${API_BASE}/skills/`, { cache: "no-store" });
   return res.json();
 }
 
 export async function createSkill(category: string, items: string[]): Promise<Skill> {
-  const res = await fetch(`${API_BASE}/skills/`, {
+  const res = await apiFetch(`${API_BASE}/skills/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ category, items }),
   });
-  await handleResponse(res);
   return res.json();
 }
 
 export async function updateSkill(id: number, category: string, items: string[]): Promise<Skill> {
-  const res = await fetch(`${API_BASE}/skills/${id}`, {
+  const res = await apiFetch(`${API_BASE}/skills/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ category, items }),
   });
-  await handleResponse(res);
   return res.json();
 }
 
 export async function deleteSkill(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/skills/${id}`, { method: "DELETE" });
-  await handleResponse(res);
+  await apiFetch(`${API_BASE}/skills/${id}`, { method: "DELETE" });
 }
 
 export async function fetchJob(id: number): Promise<Job> {
-  const res = await fetch(`${API_BASE}/jobs/${id}`, {
+  const res = await apiFetch(`${API_BASE}/jobs/${id}`, {
     next: { revalidate: 60 },
-  });
-  await handleResponse(res);
+  } as RequestInit);
   return res.json() as Promise<Job>;
 }

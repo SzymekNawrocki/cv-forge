@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Barlow_Condensed, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -25,9 +25,20 @@ const ibmPlexSans = IBM_Plex_Sans({
   weight: ["300", "400", "500", "600"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0D0D0E",
+};
+
 export const metadata: Metadata = {
-  title: "Job Hunter",
-  description: "Automated job board scraper and dashboard",
+  title: "CV Forge",
+  description: "AI-powered CV tailoring for entry-level candidates. Rewrite your CV sections for ATS compatibility.",
+  openGraph: {
+    title: "CV Forge",
+    description: "AI-powered CV tailoring for ATS compatibility",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

@@ -1,8 +1,11 @@
 from __future__ import annotations
 import json
+import logging
 import os
 import re
 from google import genai
+
+logger = logging.getLogger(__name__)
 from google.genai import types
 from groq import AsyncGroq
 from ai.prompts import (
@@ -75,11 +78,11 @@ class GeminiClient:
                 return _parse_json(response.text)
             except Exception as e:
                 if _is_rate_limited(e):
-                    print(f"[AI] {model} rate limited, trying next provider...")
+                    logger.warning("[AI] %s rate limited, trying next provider...", model)
                     continue
                 raise
 
-        print("[AI] Gemini quotas exhausted, falling back to Groq llama-3.3-70b-versatile...")
+        logger.warning("[AI] Gemini quotas exhausted, falling back to Groq llama-3.3-70b-versatile...")
         groq = _get_groq_client()
         response = await groq.chat.completions.create(
             model=GROQ_MODEL,

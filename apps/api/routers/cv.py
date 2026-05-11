@@ -1,12 +1,13 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.client import OllamaClient
 from db.base import get_session
 from db.models import MasterCV
 from domain.schemas import CVFormData, MasterCVRead, TailoredCVRead
+from rate_limit import limiter
 from services.forge_service import (
     import_cv,
     create_cv_from_form,
@@ -19,20 +20,20 @@ router = APIRouter()
 
 
 class ImportRequest(BaseModel):
-    title: str
-    raw_text: str
-    github_url: str | None = None
-    portfolio_url: str | None = None
+    title: str = Field(min_length=1, max_length=255)
+    raw_text: str = Field(min_length=1, max_length=50_000)
+    github_url: str | None = Field(None, max_length=500)
+    portfolio_url: str | None = Field(None, max_length=500)
 
 
 class ForgeRequest(BaseModel):
     master_cv_id: int
-    job_description_text: str
+    job_description_text: str = Field(min_length=1, max_length=20_000)
 
 
 class CVLinksRequest(BaseModel):
-    github_url: str | None = None
-    portfolio_url: str | None = None
+    github_url: str | None = Field(None, max_length=500)
+    portfolio_url: str | None = Field(None, max_length=500)
 
 
 def _ollama() -> OllamaClient:
@@ -40,19 +41,18 @@ def _ollama() -> OllamaClient:
 
 
 @router.post("/import", response_model=MasterCVRead)
+@limiter.limit("5/minute")
 async def cv_import(
+    request: Request,
     body: ImportRequest,
     session: AsyncSession = Depends(get_session),
     ollama: OllamaClient = Depends(_ollama),
 ):
-    try:
-        return await import_cv(
-            body.raw_text, body.title, ollama, session,
-            github_url=body.github_url,
-            portfolio_url=body.portfolio_url,
-        )
-    except Exception as e:
-        raise HTTPException(500, str(e) or repr(e))
+    return await import_cv(
+        body.raw_text, body.title, ollama, session,
+        github_url=body.github_url,
+        portfolio_url=body.portfolio_url,
+    )
 
 
 @router.post("/create", response_model=MasterCVRead)
@@ -60,10 +60,7 @@ async def cv_create(
     body: CVFormData,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        return await create_cv_from_form(body, session)
-    except Exception as e:
-        raise HTTPException(500, str(e) or repr(e))
+    return await create_cv_from_form(body, session)
 
 
 @router.get("/", response_model=list[MasterCVRead])
@@ -72,7 +69,9 @@ async def list_cvs(session: AsyncSession = Depends(get_session)):
 
 
 @router.post("/forge", response_model=TailoredCVRead)
+@limiter.limit("5/minute")
 async def forge(
+    request: Request,
     body: ForgeRequest,
     session: AsyncSession = Depends(get_session),
     ollama: OllamaClient = Depends(_ollama),
@@ -81,8 +80,6 @@ async def forge(
         return await run_forge(body.master_cv_id, body.job_description_text, ollama, session)
     except ValueError as e:
         raise HTTPException(404, str(e))
-    except Exception as e:
-        raise HTTPException(500, str(e) or repr(e))
 
 
 @router.get("/{cv_id}", response_model=MasterCVRead)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SkillCreate(BaseModel):
@@ -118,15 +118,15 @@ class CertificationEntry(BaseModel):
 
 
 class CVFormData(BaseModel):
-    title: str
-    github_url: str = ""
-    portfolio_url: str = ""
-    name: str
-    job_title: str
-    email: str = ""
-    phone: str = ""
-    location: str = ""
-    about_me: str = ""
+    title: str = Field(min_length=1, max_length=255)
+    github_url: str = Field(default="", max_length=500)
+    portfolio_url: str = Field(default="", max_length=500)
+    name: str = Field(min_length=1, max_length=255)
+    job_title: str = Field(min_length=1, max_length=255)
+    email: str = Field(default="", max_length=255)
+    phone: str = Field(default="", max_length=50)
+    location: str = Field(default="", max_length=255)
+    about_me: str = Field(default="", max_length=5_000)
     skills: list[SkillCategoryEntry] = []
     projects: list[ProjectEntry] = []
     work_experience: list[WorkExperienceEntry] = []
