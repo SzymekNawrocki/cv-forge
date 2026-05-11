@@ -22,9 +22,9 @@ apps/api/
 ├── .env                        ← DATABASE_URL, GEMINI_API_KEY
 ├── requirements.txt
 ├── ai/
-│   ├── client.py               ← GeminiClient (alias: OllamaClient): analyze_jd, forge_section, clean_cv, calculate_match_score, parse_entries_section
+│   ├── client.py               ← GeminiClient (alias: OllamaClient): methods return typed schema objects, not raw dicts
 │   ├── prompts.py              ← Prompt templates (ANALYZE_JD, FORGE_SECTION, CLEAN_CV, MATCH_SCORE, PARSE_ENTRIES, FORMAT_CV_JSON)
-│   └── ollama_client.py        ← Legacy low-level helper (unused, do not delete yet)
+│   └── schemas.py              ← Pydantic AI response models: JDAnalysis, ForgeResult, MatchScore, CleanCVResult, ParsedEntries, WorkEntry
 ├── db/
 │   ├── base.py                 ← Async engine, SessionLocal, get_session()
 │   └── models.py               ← UserProfile, MasterCV, JobDescription, TailoredCV, Skill
@@ -33,25 +33,21 @@ apps/api/
 │   ├── cv_logic/
 │   │   ├── parser.py           ← split_sections() / merge_sections() on ## headers
 │   │   └── cv_json_builder.py  ← build_cv_json(md, client, github_url, portfolio_url): prefers explicit links over regex
-│   ├── parsers/
-│   │   └── job_parser.py       ← Job listing parser
-│   └── scrapers/
-│       └── base.py             ← Scraper base class
+│   └── parsers/
+│       └── job_parser.py       ← Job listing parser
 ├── services/
-│   ├── forge_service.py        ← import_cv() (accepts links), create_cv_from_form() (no AI, _form_to_markdown()), run_forge()
+│   ├── forge_service.py        ← import_cv(), create_cv_from_form(), run_forge(), list_master_cvs(), update_master_cv_links()
 │   ├── profile_service.py      ← get_or_create_profile(), update_profile() — singleton UserProfile CRUD
-│   ├── skills_service.py       ← list_skills(), create_skill(), update_skill(), delete_skill(), build_skills_markdown()
-│   └── job_service.py          ← Job CRUD helpers
+│   └── skills_service.py       ← list_skills(), create_skill(), update_skill(), delete_skill(), build_skills_markdown()
 ├── routers/
-│   ├── cv.py                   ← POST /cv/import, POST /cv/create, GET /cv/, GET /cv/{id}, PUT /cv/{id}/links, POST /cv/forge
+│   ├── cv.py                   ← POST /cv/import, POST /cv/create, GET /cv/, GET /cv/{id}, PUT /cv/{id}/links, POST /cv/forge, DELETE /cv/{id}
 │   ├── profile.py              ← GET /profile/, PUT /profile/
 │   ├── skills.py               ← GET /skills/, POST /skills/, PUT /skills/{id}, DELETE /skills/{id}
-│   ├── jobs.py                 ← GET /jobs/, GET /jobs/{id}
-│   ├── search.py               ← POST /search/ (stub)
-│   └── recruiters.py           ← GET /recruiters/ (stub)
+│   └── jobs.py                 ← GET /jobs/, GET /jobs/{id}
 └── tests/
     ├── conftest.py
-    └── test_job_parser.py
+    ├── test_job_parser.py
+    └── test_cv_pure.py         ← 37 unit tests for split_sections, merge_sections, _parse_bullets, _extract_header, _normalize_cv_markdown, _form_to_markdown, build_skills_markdown
 ```
 
 ## Canonical CV Markdown Format
@@ -142,6 +138,7 @@ Two paths — both produce a `MasterCV` row:
 | `/profile` | Global profile settings — name, job title, contact info, GitHub URL, portfolio URL. Auto-fills new CV forms. |
 
 All API calls go through `src/lib/api.ts`. Client Components only at leaf level.
+- `APIError` class in `api.ts`: `new APIError(status, body)` — has `.isNotFound` and `.isServerError` helpers. All fetch wrappers use `handleResponse(res)` which throws `APIError` on non-2xx. Catch with `e instanceof APIError` to branch on status code.
 
 ## Frontend Dependencies
 - `@react-pdf/renderer` — renders `TailoredCV.content_json` as a real PDF in the browser
@@ -171,10 +168,11 @@ Turbo config: `--concurrency=3` (2 persistent tasks require ≥3), `init-db` tas
 - **Gemini SDK**: Use `google-genai` (not the deprecated `google-generativeai`). Import: `from google import genai`.
 - **Groq SDK**: `groq>=0.9.0` — `AsyncGroq` client, `response_format={"type": "json_object"}` for JSON mode.
 - **JSON Only**: Gemini calls use `response_mime_type="application/json"`; Groq calls use `response_format={"type": "json_object"}`. Parse with `_parse_json()` in `ai/client.py`.
+- **AI Response Schemas**: Every `GeminiClient` method returns a typed Pydantic object from `ai/schemas.py` — never a raw dict. Add new AI calls by: (1) defining a schema in `ai/schemas.py`, (2) calling `Schema.model_validate(raw)` inside the client method. `MatchScore.clamp_score` validator enforces 0–100 range.
 - **DB init**: `create_all` runs in two places — `init_db.py` (pre-dev) and `main.py` lifespan (idempotent safety net). No Alembic yet. New columns on existing tables are added via `ALTER TABLE … ADD COLUMN IF NOT EXISTS` in both places (idempotent — safe to run repeatedly).
-- **TDD**: Tests in `apps/api/tests/` using pytest-asyncio.
+- **TDD**: Tests in `apps/api/tests/` using pytest-asyncio. Pure (no-IO) functions tested in `test_cv_pure.py` — no mocks needed. Run: `apps/api/.venv/Scripts/python.exe -m pytest tests/ -v`.
 - **Skills**: Matt Pocock skills installed in `.claude/skills/`.
-- **Clean Architecture**: Routers → Services → Domain/DB. No DB calls in routers.
+- **Clean Architecture**: Routers → Services → Domain/DB. No DB calls in routers. All CV list/mutate operations go through `forge_service.py` functions — routers never import `sqlalchemy.select`.
 - **RAM**: Keep concurrency ≤ 3 (Turbo minimum for 2 persistent tasks). No LangChain/LlamaIndex. Process CV sections sequentially.
 - **Windows Python**: Use `.venv\Scripts\python.exe` in `apps/api/package.json` scripts — `python` and `python3` are not on PATH, only `py` (Windows Launcher). Venv lives at `apps/api/.venv`.
 - **No emojis in Python prints**: Windows console uses cp1250 — emoji in `print()` raises `UnicodeEncodeError` at startup.
