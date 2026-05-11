@@ -1,14 +1,19 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.client import OllamaClient
 from db.base import get_session
 from db.models import MasterCV
 from domain.schemas import CVFormData, MasterCVRead, TailoredCVRead
-from services.forge_service import import_cv, create_cv_from_form, run_forge
+from services.forge_service import (
+    import_cv,
+    create_cv_from_form,
+    run_forge,
+    list_master_cvs,
+    update_master_cv_links,
+)
 
 router = APIRouter()
 
@@ -63,8 +68,7 @@ async def cv_create(
 
 @router.get("/", response_model=list[MasterCVRead])
 async def list_cvs(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(MasterCV).order_by(MasterCV.created_at.desc()))
-    return result.scalars().all()
+    return await list_master_cvs(session)
 
 
 @router.post("/forge", response_model=TailoredCVRead)
@@ -95,14 +99,10 @@ async def update_cv_links(
     body: CVLinksRequest,
     session: AsyncSession = Depends(get_session),
 ):
-    cv = await session.get(MasterCV, cv_id)
-    if not cv:
-        raise HTTPException(404, "CV not found")
-    cv.github_url = body.github_url
-    cv.portfolio_url = body.portfolio_url
-    await session.commit()
-    await session.refresh(cv)
-    return cv
+    try:
+        return await update_master_cv_links(cv_id, body.github_url, body.portfolio_url, session)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
 
 
 @router.delete("/{cv_id}", status_code=204)

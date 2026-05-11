@@ -13,6 +13,13 @@ from ai.prompts import (
     MATCH_SCORE_PROMPT,
     PARSE_ENTRIES_PROMPT,
 )
+from ai.schemas import (
+    CleanCVResult,
+    ForgeResult,
+    JDAnalysis,
+    MatchScore,
+    ParsedEntries,
+)
 
 GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_LITE_MODEL = "gemini-2.5-flash-lite"
@@ -86,8 +93,9 @@ class GeminiClient:
         )
         return _parse_json(response.choices[0].message.content)
 
-    async def analyze_jd(self, jd_text: str) -> dict:
-        return await self._generate_json(ANALYZE_JD_PROMPT.format(jd_text=jd_text))
+    async def analyze_jd(self, jd_text: str) -> JDAnalysis:
+        raw = await self._generate_json(ANALYZE_JD_PROMPT.format(jd_text=jd_text))
+        return JDAnalysis.model_validate(raw)
 
     async def forge_section(
         self,
@@ -99,8 +107,8 @@ class GeminiClient:
         missing_critical: list[str] | None = None,
         missing_nice_to_have: list[str] | None = None,
         existing_keywords: list[str] | None = None,
-    ) -> dict:
-        return await self._generate_json(
+    ) -> ForgeResult:
+        raw = await self._generate_json(
             FORGE_SECTION_PROMPT.format(
                 section_name=section_name,
                 section_content=section_content,
@@ -112,6 +120,7 @@ class GeminiClient:
                 existing_keywords=", ".join(existing_keywords or []) or "none identified",
             )
         )
+        return ForgeResult.model_validate(raw)
 
     async def calculate_match_score(
         self,
@@ -119,8 +128,8 @@ class GeminiClient:
         jd_text: str,
         required_keywords: list[str] | None = None,
         nice_to_have_keywords: list[str] | None = None,
-    ) -> dict:
-        return await self._generate_json(
+    ) -> MatchScore:
+        raw = await self._generate_json(
             MATCH_SCORE_PROMPT.format(
                 cv_text=cv_text,
                 jd_text=jd_text,
@@ -128,9 +137,11 @@ class GeminiClient:
                 nice_to_have_keywords=", ".join(nice_to_have_keywords or []) or "derive from job description",
             )
         )
+        return MatchScore.model_validate(raw)
 
-    async def clean_cv(self, raw_text: str) -> dict:
-        return await self._generate_json(CLEAN_CV_PROMPT.format(raw_text=raw_text))
+    async def clean_cv(self, raw_text: str) -> CleanCVResult:
+        raw = await self._generate_json(CLEAN_CV_PROMPT.format(raw_text=raw_text))
+        return CleanCVResult.model_validate(raw)
 
     async def format_cv_json(self, cv_markdown: str) -> dict:
         return await self._generate_json(
@@ -138,13 +149,13 @@ class GeminiClient:
         )
 
     async def parse_entries_section(self, section_name: str, section_content: str) -> list[dict]:
-        result = await self._generate_json(
+        raw = await self._generate_json(
             PARSE_ENTRIES_PROMPT.format(
                 section_name=section_name,
                 section_content=section_content,
             )
         )
-        return result.get("entries", [])
+        return [entry.model_dump() for entry in ParsedEntries.model_validate(raw).entries]
 
 
 # Alias so existing import sites (routers/cv.py, forge_service.py) need no changes

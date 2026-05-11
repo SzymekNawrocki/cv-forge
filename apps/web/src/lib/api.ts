@@ -1,5 +1,26 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export class APIError extends Error {
+  constructor(
+    public readonly status: number,
+    body: string,
+  ) {
+    super(body || `HTTP ${status}`);
+    this.name = "APIError";
+  }
+
+  get isNotFound() { return this.status === 404; }
+  get isServerError() { return this.status >= 500; }
+}
+
+async function handleResponse(res: Response): Promise<Response> {
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new APIError(res.status, body || res.statusText);
+  }
+  return res;
+}
+
 export interface MasterCV {
   id: number;
   title: string;
@@ -86,7 +107,7 @@ export interface CVFormData {
 
 export async function fetchMasterCVs(): Promise<MasterCV[]> {
   const res = await fetch(`${API_BASE}/cv/`, { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to fetch CVs");
+  await handleResponse(res);
   return res.json();
 }
 
@@ -101,7 +122,7 @@ export async function importCV(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title, raw_text, github_url: github_url || null, portfolio_url: portfolio_url || null }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }
 
@@ -111,7 +132,7 @@ export async function createCV(data: CVFormData): Promise<MasterCV> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }
 
@@ -125,13 +146,13 @@ export async function updateCVLinks(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ github_url, portfolio_url }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }
 
 export async function deleteCV(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/cv/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
 }
 
 export async function forgeCV(
@@ -143,13 +164,13 @@ export async function forgeCV(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ master_cv_id, job_description_text }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }
 
 export async function getProfile(): Promise<UserProfile> {
   const res = await fetch(`${API_BASE}/profile/`, { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to fetch profile");
+  await handleResponse(res);
   return res.json();
 }
 
@@ -159,7 +180,7 @@ export async function updateProfile(data: Partial<UserProfile>): Promise<UserPro
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }
 
@@ -181,7 +202,7 @@ export async function fetchJobs(limit = 50): Promise<Job[]> {
   const res = await fetch(`${API_BASE}/jobs/?limit=${limit}`, {
     next: { revalidate: 60 },
   });
-  if (!res.ok) throw new Error("Failed to fetch jobs");
+  await handleResponse(res);
   const data = await res.json();
   return data.jobs as Job[];
 }
@@ -195,7 +216,7 @@ export interface Skill {
 
 export async function fetchSkills(): Promise<Skill[]> {
   const res = await fetch(`${API_BASE}/skills/`, { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to fetch skills");
+  await handleResponse(res);
   return res.json();
 }
 
@@ -205,7 +226,7 @@ export async function createSkill(category: string, items: string[]): Promise<Sk
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ category, items }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }
 
@@ -215,19 +236,19 @@ export async function updateSkill(id: number, category: string, items: string[])
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ category, items }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }
 
 export async function deleteSkill(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/skills/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
 }
 
 export async function fetchJob(id: number): Promise<Job> {
   const res = await fetch(`${API_BASE}/jobs/${id}`, {
     next: { revalidate: 60 },
   });
-  if (!res.ok) throw new Error(`Job ${id} not found`);
+  await handleResponse(res);
   return res.json() as Promise<Job>;
 }

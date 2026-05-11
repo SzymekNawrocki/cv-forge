@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import MasterCV, JobDescription, TailoredCV
 from domain.cv_logic.parser import FORGEABLE, split_sections, merge_sections
@@ -101,6 +102,27 @@ def _form_to_markdown(data: CVFormData) -> str:
     return "\n".join(lines).strip()
 
 
+async def list_master_cvs(session: AsyncSession) -> list[MasterCV]:
+    result = await session.execute(select(MasterCV).order_by(MasterCV.created_at.desc()))
+    return list(result.scalars().all())
+
+
+async def update_master_cv_links(
+    cv_id: int,
+    github_url: str | None,
+    portfolio_url: str | None,
+    session: AsyncSession,
+) -> MasterCV:
+    cv = await session.get(MasterCV, cv_id)
+    if cv is None:
+        raise ValueError(f"CV {cv_id} not found")
+    cv.github_url = github_url
+    cv.portfolio_url = portfolio_url
+    await session.commit()
+    await session.refresh(cv)
+    return cv
+
+
 async def import_cv(
     raw_text: str,
     title: str,
@@ -110,7 +132,7 @@ async def import_cv(
     portfolio_url: str | None = None,
 ) -> MasterCV:
     result = await ollama.clean_cv(raw_text)
-    md = _normalize_cv_markdown(result.get("markdown") or raw_text)
+    md = _normalize_cv_markdown(result.markdown or raw_text)
     cv = MasterCV(
         title=title,
         content_markdown=md,
@@ -151,10 +173,10 @@ async def run_forge(
         raise ValueError(f"MasterCV {master_cv_id} not found")
 
     analysis = await ollama.analyze_jd(jd_text)
-    required_kw: list[str] = analysis.get("required_skills", [])
-    nice_kw: list[str] = analysis.get("nice_to_have", [])
-    keywords: list[str] = analysis.get("keywords", []) + required_kw
-    job_title: str = analysis.get("job_title", "")
+    required_kw: list[str] = analysis.required_skills
+    nice_kw: list[str] = analysis.nice_to_have
+    keywords: list[str] = analysis.keywords + required_kw
+    job_title: str = analysis.job_title
 
     jd = JobDescription(raw_text=jd_text, extracted_keywords=", ".join(keywords))
     session.add(jd)
@@ -165,10 +187,10 @@ async def run_forge(
         required_keywords=required_kw,
         nice_to_have_keywords=nice_kw,
     )
-    initial_score = min(float(before_result.get("score", 0)), 100.0)
+    initial_score = before_result.score
 
-    missing_critical: list[str] = before_result.get("missing_critical", [])
-    missing_nice_to_have: list[str] = before_result.get("missing_nice_to_have", [])
+    missing_critical: list[str] = before_result.missing_critical
+    missing_nice_to_have: list[str] = before_result.missing_nice_to_have
     missing_set = set(missing_critical + missing_nice_to_have)
     existing_keywords = [k for k in keywords if k not in missing_set]
 
@@ -186,7 +208,7 @@ async def run_forge(
     forged: dict[str, str] = {}
     for sec_title, content in sections.items():
         if sec_title.lower() in FORGEABLE:
-            result = await ollama.forge_section(
+            forge_result = await ollama.forge_section(
                 section_name=sec_title,
                 section_content=content,
                 keywords=keywords,
@@ -196,7 +218,7 @@ async def run_forge(
                 missing_nice_to_have=missing_nice_to_have,
                 existing_keywords=existing_keywords,
             )
-            forged[sec_title] = result.get("rewritten") or content
+            forged[sec_title] = forge_result.rewritten or content
         else:
             forged[sec_title] = content
 
@@ -206,7 +228,7 @@ async def run_forge(
         required_keywords=required_kw,
         nice_to_have_keywords=nice_kw,
     )
-    match_score = min(float(after_result.get("score", 0)), 100.0)
+    match_score = after_result.score
 
     if match_score < initial_score:
         logger.warning(
