@@ -396,7 +396,7 @@ export default function ForgePage() {
           ) : cvData ? (
             <>
               {rightTab === 'preview' && (
-                <div style={{ flex: 1, minHeight: 0 }}>
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', paddingTop: '6px' }}>
                   <CVViewer data={cvData} cvId={result!.id} />
                 </div>
               )}
