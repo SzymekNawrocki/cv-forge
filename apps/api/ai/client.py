@@ -55,9 +55,12 @@ def _get_groq_client() -> AsyncGroq:
     return _groq_client
 
 
-def _is_rate_limited(e: Exception) -> bool:
+def _is_transient_error(e: Exception) -> bool:
     msg = str(e).lower()
-    return any(kw in msg for kw in ("429", "rate_limit", "quota", "resource_exhausted", "too many requests"))
+    return any(kw in msg for kw in (
+        "429", "rate_limit", "quota", "resource_exhausted", "too many requests",
+        "503", "unavailable", "high demand", "try again",
+    ))
 
 
 _JSON_CONFIG = types.GenerateContentConfig(
@@ -77,8 +80,8 @@ class GeminiClient:
                 )
                 return _parse_json(response.text)
             except Exception as e:
-                if _is_rate_limited(e):
-                    logger.warning("[AI] %s rate limited, trying next provider...", model)
+                if _is_transient_error(e):
+                    logger.warning("[AI] %s transient error (%s), trying next provider...", model, type(e).__name__)
                     continue
                 raise
 
