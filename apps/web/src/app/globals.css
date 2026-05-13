@@ -70,6 +70,64 @@ body {
   box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.08) !important;
 }
 
+/* Landing page — button + card hover effects (CSS-only, no JS needed) */
+.landing-btn-primary {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+.landing-btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+  transform: translateX(-150%);
+}
+.landing-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 36px rgba(255,87,34,0.50) !important;
+}
+.landing-btn-primary:hover::after {
+  animation: forge-sheen 0.50s ease-out;
+}
+.landing-btn-primary:active { transform: scale(0.97); }
+
+.landing-btn-secondary {
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.landing-btn-secondary:hover {
+  color: #FF8C42 !important;
+  border-color: rgba(255,87,34,0.50) !important;
+  background: rgba(255,87,34,0.06) !important;
+}
+
+.landing-feature-card {
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+.landing-feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #FF5722, #FF8C42);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.landing-feature-card:hover {
+  border-color: rgba(255,87,34,0.35) !important;
+  background: #191919 !important;
+  box-shadow: 0 0 28px rgba(255,87,34,0.08), 0 4px 20px rgba(0,0,0,0.4);
+}
+.landing-feature-card:hover::before { opacity: 1; }
+
+.landing-step + .landing-step { border-left: 1px solid #1E1E20; }
+@media (max-width: 700px) {
+  .landing-step + .landing-step { border-left: none; border-top: 1px solid #1E1E20; }
+}
+
 /* Nav link hover — defined here so Server Components can use className */
 .forge-nav-link {
   padding: 5px 13px;
