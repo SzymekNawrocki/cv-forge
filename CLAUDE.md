@@ -3,11 +3,6 @@
 ## Project Mission
 AI tool for entry-level candidates. Takes a **Master CV** (Markdown) + a **Job Description**, uses the Gemini API to surgically rewrite CV sections for ATS compatibility and professional impact.
 
-## Hardware Constraints (8GB RAM)
-- AI calls go to Gemini API (cloud) — no local model RAM usage.
-- Process CV sections sequentially. Avoid large in-memory objects.
-- No LangChain/LlamaIndex.
-
 ## Tech Stack
 - **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS v4 — `apps/web`
 - **Backend**: FastAPI (Python 3.11+), httpx — `apps/api`
@@ -153,10 +148,9 @@ All API calls go through `src/lib/api.ts`. Client Components only at leaf level.
 
 `npm run dev` from root runs in this sequence:
 
-1. **RAM check** — `tools/check-ram.js` (node, `os.freemem()`). Exits 1 if < 1 GB free, blocking dev start.
-2. **DB init** — `apps/api/init_db.py` via Turbo `init-db` task. Creates all tables via SQLAlchemy, exits. Runs before API uvicorn process.
-3. **API** — uvicorn on `:8000`. Logs `API Ready - Database Connected` after lifespan `create_all`.
-4. **Frontend** — `next dev` on `:3000`. Starts in parallel with API (App Router renders on demand, no startup pre-render).
+1. **DB init** — `apps/api/init_db.py` via Turbo `init-db` task. Creates all tables via SQLAlchemy, exits. Runs before API uvicorn process.
+2. **API** — uvicorn on `:8000`. Logs `API Ready - Database Connected` after lifespan `create_all`.
+3. **Frontend** — `next dev` on `:3000`. Starts in parallel with API (App Router renders on demand, no startup pre-render).
 
 Turbo config: `--concurrency=3` (2 persistent tasks require ≥3), `init-db` task is non-persistent/no-cache, `dev` task `dependsOn: ["init-db"]`.
 
@@ -173,6 +167,6 @@ Turbo config: `--concurrency=3` (2 persistent tasks require ≥3), `init-db` tas
 - **TDD**: Tests in `apps/api/tests/` using pytest-asyncio. Pure (no-IO) functions tested in `test_cv_pure.py` — no mocks needed. Run: `apps/api/.venv/Scripts/python.exe -m pytest tests/ -v`.
 - **Skills**: Matt Pocock skills installed in `.claude/skills/`.
 - **Clean Architecture**: Routers → Services → Domain/DB. No DB calls in routers. All CV list/mutate operations go through `forge_service.py` functions — routers never import `sqlalchemy.select`.
-- **RAM**: Keep concurrency ≤ 3 (Turbo minimum for 2 persistent tasks). No LangChain/LlamaIndex. Process CV sections sequentially.
+- **Concurrency**: Keep Turbo concurrency ≤ 3 (minimum for 2 persistent tasks). No LangChain/LlamaIndex. Process CV sections sequentially.
 - **Windows Python**: Use `.venv\Scripts\python.exe` in `apps/api/package.json` scripts — `python` and `python3` are not on PATH, only `py` (Windows Launcher). Venv lives at `apps/api/.venv`.
 - **No emojis in Python prints**: Windows console uses cp1250 — emoji in `print()` raises `UnicodeEncodeError` at startup.

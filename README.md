@@ -1,159 +1,166 @@
-# Turborepo starter
+# CV Forge
 
-This Turborepo starter is maintained by the Turborepo core team.
+AI-powered CV tailoring tool for entry-level candidates. Paste a job description, get a surgically rewritten CV optimised for ATS and scored for match quality — then download it as a polished PDF.
 
-## Using this example
+## How it works
 
-Run the following command:
+1. **Build your Master CV** — import raw text (AI-cleaned) or fill in a structured form
+2. **Manage your Skills DB** — maintain a categorised skills list that gets injected at forge time
+3. **Forge** — paste a job description, the AI analyses it, rewrites each CV section, scores the match before and after, and produces a downloadable PDF
 
-```sh
-npx create-turbo@latest
+## Tech stack
+
+| Layer | Technology | Version |
+|---|---|---|
+| Frontend framework | Next.js | 16.2.4 |
+| UI library | React | 19.2.4 |
+| CSS | Tailwind CSS | v4 |
+| Language (frontend) | TypeScript | ^5 |
+| PDF rendering | @react-pdf/renderer | ^4.5.1 |
+| Backend framework | FastAPI | 0.115.0 |
+| ASGI server | Uvicorn | 0.30.6 |
+| Language (backend) | Python | 3.11+ |
+| ORM | SQLAlchemy (async) | 2.0.49 |
+| DB driver | asyncpg | 0.31.0 |
+| Database | Neon DB (PostgreSQL) | — |
+| Data validation | Pydantic | 2.13.4 |
+| HTTP client | httpx | 0.28.1 |
+| AI — primary | Gemini 2.5 Flash (`google-genai`) | 1.75.0 |
+| AI — fallback | Groq `llama-3.3-70b-versatile` | 1.2.0 |
+| Rate limiting | slowapi / limits | 0.1.9 / 5.8.0 |
+| Monorepo | Turborepo | latest |
+| Package manager | npm | 10.9.7 |
+
+## Project structure
+
+```
+job-hunter/
+├── apps/
+│   ├── api/                  ← FastAPI backend (port 8000)
+│   │   ├── ai/               ← GeminiClient, prompts, response schemas
+│   │   ├── db/               ← SQLAlchemy models + async engine
+│   │   ├── domain/           ← Pydantic I/O schemas, CV parsing logic
+│   │   ├── routers/          ← /cv, /jobs, /skills, /profile
+│   │   ├── services/         ← forge_service, profile_service, skills_service
+│   │   ├── tests/
+│   │   ├── main.py
+│   │   ├── init_db.py
+│   │   └── requirements.txt
+│   └── web/                  ← Next.js frontend (port 3000)
+│       └── src/
+│           ├── app/          ← App Router pages
+│           └── components/   ← CVDocument, CVViewer, CVManualForm, forge UI
+├── packages/
+│   ├── eslint-config/
+│   ├── typescript-config/
+│   └── ui/
+├── tools/
+│   └── check-ram.js          ← Blocks dev start if free RAM < 1 GB
+└── turbo.json
 ```
 
-## What's inside?
+## Prerequisites
 
-This Turborepo includes the following packages/apps:
+- Node.js with npm 10.9.7+
+- Python 3.11+
+- A [Neon](https://neon.tech) (or any PostgreSQL) database
+- A [Gemini API key](https://aistudio.google.com/app/apikey) (free tier: 15 RPM)
+- _(Optional)_ A [Groq API key](https://console.groq.com) for rate-limit fallback (free tier: 30 RPM)
 
-### Apps and Packages
+## Setup
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+**1. Clone and install**
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```bash
+git clone <repo-url>
+cd job-hunter
+npm install
 ```
 
-Without global `turbo`, use your package manager:
+**2. Create the Python virtual environment**
 
-```sh
-cd my-turborepo
-npx turbo build
-npm dlx turbo build
-npm exec turbo build
+```bash
+cd apps/api
+py -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+**3. Configure environment variables**
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
+```bash
+cp apps/api/.env.example apps/api/.env
 ```
 
-Without global `turbo`:
+Edit `apps/api/.env`:
 
-```sh
-npx turbo build --filter=docs
-npm exec turbo build --filter=docs
-npm exec turbo build --filter=docs
+```env
+# Required
+DATABASE_URL=postgresql+asyncpg://user:password@host:5432/dbname
+GEMINI_API_KEY=your_gemini_key
+
+# Optional
+GROQ_API_KEY=                    # fallback when Gemini rate-limits
+API_SECRET_KEY=                  # if set, all requests must send: Authorization: Bearer <value>
+ALLOWED_ORIGINS=http://localhost:3000
 ```
 
-### Develop
+**4. Start development**
 
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
+```bash
+npm run dev
 ```
 
-Without global `turbo`, use your package manager:
+This runs three tasks via Turborepo:
 
-```sh
-cd my-turborepo
-npx turbo dev
-npm exec turbo dev
-npm exec turbo dev
+1. RAM check (exits if < 1 GB free)
+2. `init_db.py` — creates all tables via SQLAlchemy
+3. API on `:8000` + frontend on `:3000` (parallel)
+
+## Pages
+
+| Route | Description |
+|---|---|
+| `/` | Job listings |
+| `/cv-manager` | Import text or fill a form to create a Master CV; inline link editor per CV |
+| `/skills` | Skills DB — add/edit/delete categorised skill tags |
+| `/forge` | Paste a JD → AI rewrites CV → Before/After score badges → PDF preview + editor + download |
+| `/profile` | Global profile settings — auto-fills new CV forms |
+
+## AI provider cascade
+
+All AI calls go through `GeminiClient._generate_json()` with automatic fallback on 429/503 errors:
+
+```
+gemini-2.5-flash  →  gemini-2.5-flash-lite  →  groq/llama-3.3-70b-versatile
+(15 RPM free)         (30 RPM free)              (30 RPM free, needs GROQ_API_KEY)
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Running tests
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
+```bash
+cd apps/api
+.venv\Scripts\python.exe -m pytest tests/ -v
 ```
 
-Without global `turbo`:
+## API endpoints
 
-```sh
-npx turbo dev --filter=web
-npm exec turbo dev --filter=web
-npm exec turbo dev --filter=web
-```
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/health` | DB connectivity check |
+| `POST` | `/cv/import` | Import raw CV text (AI-cleaned) |
+| `POST` | `/cv/create` | Create CV from structured form (no AI) |
+| `GET` | `/cv/` | List all Master CVs |
+| `GET` | `/cv/{id}` | Get a single Master CV |
+| `PUT` | `/cv/{id}/links` | Update GitHub / portfolio URLs for a CV |
+| `POST` | `/cv/forge` | Run the forge loop — returns tailored CV + scores |
+| `DELETE` | `/cv/{id}` | Delete a Master CV |
+| `GET` | `/jobs/` | List job listings |
+| `GET` | `/jobs/{id}` | Get job detail |
+| `GET` | `/skills/` | List skills |
+| `POST` | `/skills/` | Create skill category |
+| `PUT` | `/skills/{id}` | Update skill category |
+| `DELETE` | `/skills/{id}` | Delete skill category |
+| `GET` | `/profile/` | Get user profile |
+| `PUT` | `/profile/` | Update user profile |
 
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-npm exec turbo login
-npm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-npm exec turbo link
-npm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+Interactive docs available at `http://localhost:8000/docs` while the API is running.

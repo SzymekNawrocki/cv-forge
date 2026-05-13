@@ -3,7 +3,6 @@
   "private": true,
   "packageManager": "npm@10.9.7",
   "scripts": {
-    "predev": "node tools/check-ram.js",
     "dev": "turbo run dev --concurrency=3",
     "build": "turbo build",
     "lint": "turbo lint",
