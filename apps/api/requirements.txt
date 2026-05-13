@@ -11,3 +11,7 @@ google-genai==1.75.0
 groq==1.2.0
 slowapi==0.1.9
 limits==5.8.0
+fastapi-users[sqlalchemy]==13.0.0
+httpx-oauth==0.16.1
+resend==2.0.0
+python-multipart==0.0.9

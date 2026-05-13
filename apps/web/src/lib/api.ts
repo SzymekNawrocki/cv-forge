@@ -1,5 +1,4 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
 
 export class APIError extends Error {
   constructor(
@@ -15,23 +14,100 @@ export class APIError extends Error {
 }
 
 async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const authHeaders: Record<string, string> = API_KEY
-    ? { Authorization: `Bearer ${API_KEY}` }
-    : {};
-
   const res = await fetch(url, {
     ...options,
+    credentials: "include",
     headers: {
-      ...authHeaders,
       ...(options.headers as Record<string, string> ?? {}),
     },
   });
+
+  if (res.status === 401) {
+    if (typeof window !== "undefined") window.location.href = "/login";
+    throw new APIError(401, "Unauthorized");
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new APIError(res.status, body || res.statusText);
   }
   return res;
+}
+
+// Auth functions
+
+export async function login(email: string, password: string): Promise<void> {
+  const body = new URLSearchParams({ username: email, password });
+  const res = await fetch(`${API_BASE}/auth/jwt/login`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new APIError(res.status, text || res.statusText);
+  }
+}
+
+export async function register(email: string, password: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/register`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new APIError(res.status, text || res.statusText);
+  }
+}
+
+export async function logout(): Promise<void> {
+  await fetch(`${API_BASE}/auth/jwt/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/verify`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new APIError(res.status, text || res.statusText);
+  }
+}
+
+export interface CurrentUser {
+  id: string;
+  email: string;
+  is_verified: boolean;
+  is_active: boolean;
+}
+
+export async function getCurrentUser(): Promise<CurrentUser> {
+  const res = await fetch(`${API_BASE}/users/me`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!res.ok) throw new APIError(res.status, res.statusText);
+  return res.json();
+}
+
+export async function startGoogleOAuth(): Promise<string> {
+  const callbackUrl = `${API_BASE}/auth/google/callback`;
+  const res = await fetch(
+    `${API_BASE}/auth/google/authorize?callback_url=${encodeURIComponent(callbackUrl)}`,
+    { credentials: "include" },
+  );
+  if (!res.ok) throw new APIError(res.status, res.statusText);
+  const data = await res.json();
+  return data.authorization_url as string;
 }
 
 export interface MasterCV {

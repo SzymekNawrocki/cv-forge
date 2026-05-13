@@ -1,11 +1,11 @@
-from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.client import OllamaClient
+from auth.config import current_active_verified_user
 from db.base import get_session
-from db.models import MasterCV
+from db.models import MasterCV, User
 from domain.schemas import CVFormData, MasterCVRead, TailoredCVRead
 from rate_limit import limiter
 from services.forge_service import (
@@ -47,9 +47,11 @@ async def cv_import(
     body: ImportRequest,
     session: AsyncSession = Depends(get_session),
     ollama: OllamaClient = Depends(_ollama),
+    user: User = Depends(current_active_verified_user),
 ):
     return await import_cv(
         body.raw_text, body.title, ollama, session,
+        user_id=user.id,
         github_url=body.github_url,
         portfolio_url=body.portfolio_url,
     )
@@ -59,13 +61,17 @@ async def cv_import(
 async def cv_create(
     body: CVFormData,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(current_active_verified_user),
 ):
-    return await create_cv_from_form(body, session)
+    return await create_cv_from_form(body, session, user_id=user.id)
 
 
 @router.get("/", response_model=list[MasterCVRead])
-async def list_cvs(session: AsyncSession = Depends(get_session)):
-    return await list_master_cvs(session)
+async def list_cvs(
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(current_active_verified_user),
+):
+    return await list_master_cvs(session, user_id=user.id)
 
 
 @router.post("/forge", response_model=TailoredCVRead)
@@ -75,17 +81,22 @@ async def forge(
     body: ForgeRequest,
     session: AsyncSession = Depends(get_session),
     ollama: OllamaClient = Depends(_ollama),
+    user: User = Depends(current_active_verified_user),
 ):
     try:
-        return await run_forge(body.master_cv_id, body.job_description_text, ollama, session)
+        return await run_forge(body.master_cv_id, body.job_description_text, ollama, session, user_id=user.id)
     except ValueError as e:
         raise HTTPException(404, str(e))
 
 
 @router.get("/{cv_id}", response_model=MasterCVRead)
-async def get_cv(cv_id: int, session: AsyncSession = Depends(get_session)):
+async def get_cv(
+    cv_id: int,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(current_active_verified_user),
+):
     cv = await session.get(MasterCV, cv_id)
-    if not cv:
+    if not cv or cv.user_id != user.id:
         raise HTTPException(404, "CV not found")
     return cv
 
@@ -95,17 +106,22 @@ async def update_cv_links(
     cv_id: int,
     body: CVLinksRequest,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(current_active_verified_user),
 ):
     try:
-        return await update_master_cv_links(cv_id, body.github_url, body.portfolio_url, session)
+        return await update_master_cv_links(cv_id, body.github_url, body.portfolio_url, session, user_id=user.id)
     except ValueError as e:
         raise HTTPException(404, str(e))
 
 
 @router.delete("/{cv_id}", status_code=204)
-async def delete_cv(cv_id: int, session: AsyncSession = Depends(get_session)):
+async def delete_cv(
+    cv_id: int,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(current_active_verified_user),
+):
     cv = await session.get(MasterCV, cv_id)
-    if not cv:
+    if not cv or cv.user_id != user.id:
         raise HTTPException(404, "CV not found")
     await session.delete(cv)
     await session.commit()

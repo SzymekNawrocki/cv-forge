@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import MasterCV, JobDescription, TailoredCV
@@ -102,8 +103,10 @@ def _form_to_markdown(data: CVFormData) -> str:
     return "\n".join(lines).strip()
 
 
-async def list_master_cvs(session: AsyncSession) -> list[MasterCV]:
-    result = await session.execute(select(MasterCV).order_by(MasterCV.created_at.desc()))
+async def list_master_cvs(session: AsyncSession, user_id: uuid.UUID) -> list[MasterCV]:
+    result = await session.execute(
+        select(MasterCV).where(MasterCV.user_id == user_id).order_by(MasterCV.created_at.desc())
+    )
     return list(result.scalars().all())
 
 
@@ -112,9 +115,10 @@ async def update_master_cv_links(
     github_url: str | None,
     portfolio_url: str | None,
     session: AsyncSession,
+    user_id: uuid.UUID,
 ) -> MasterCV:
     cv = await session.get(MasterCV, cv_id)
-    if cv is None:
+    if cv is None or cv.user_id != user_id:
         raise ValueError(f"CV {cv_id} not found")
     cv.github_url = github_url
     cv.portfolio_url = portfolio_url
@@ -128,6 +132,7 @@ async def import_cv(
     title: str,
     ollama: OllamaClient,
     session: AsyncSession,
+    user_id: uuid.UUID,
     github_url: str | None = None,
     portfolio_url: str | None = None,
 ) -> MasterCV:
@@ -136,6 +141,7 @@ async def import_cv(
     cv = MasterCV(
         title=title,
         content_markdown=md,
+        user_id=user_id,
         github_url=github_url or None,
         portfolio_url=portfolio_url or None,
     )
@@ -148,11 +154,13 @@ async def import_cv(
 async def create_cv_from_form(
     data: CVFormData,
     session: AsyncSession,
+    user_id: uuid.UUID,
 ) -> MasterCV:
     md = _form_to_markdown(data)
     cv = MasterCV(
         title=data.title,
         content_markdown=md,
+        user_id=user_id,
         github_url=data.github_url or None,
         portfolio_url=data.portfolio_url or None,
     )
@@ -167,9 +175,10 @@ async def run_forge(
     jd_text: str,
     ollama: OllamaClient,
     session: AsyncSession,
+    user_id: uuid.UUID,
 ) -> TailoredCV:
     cv = await session.get(MasterCV, master_cv_id)
-    if cv is None:
+    if cv is None or cv.user_id != user_id:
         raise ValueError(f"MasterCV {master_cv_id} not found")
 
     analysis = await ollama.analyze_jd(jd_text)
@@ -178,7 +187,7 @@ async def run_forge(
     keywords: list[str] = analysis.keywords + required_kw
     job_title: str = analysis.job_title
 
-    jd = JobDescription(raw_text=jd_text, extracted_keywords=", ".join(keywords))
+    jd = JobDescription(raw_text=jd_text, extracted_keywords=", ".join(keywords), user_id=user_id)
     session.add(jd)
     await session.flush()
 
@@ -198,7 +207,7 @@ async def run_forge(
 
     # Only inject full DB skills when CV has no existing skills content (Option B).
     # Form-created CVs with explicit skill selections are preserved.
-    db_skills = await list_skills(session)
+    db_skills = await list_skills(session, user_id=user_id)
     if db_skills:
         skills_key = next((k for k in sections if k.lower() == "skills"), None)
         has_skills = bool(skills_key and sections.get(skills_key, "").strip())

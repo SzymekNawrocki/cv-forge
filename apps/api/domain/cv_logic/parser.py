@@ -2,7 +2,7 @@ from __future__ import annotations
 import re
 
 _HEADER_RE = re.compile(r"^##\s+(.+)$", re.MULTILINE)
-FORGEABLE = {"Summary", "Experience", "Skills"}
+FORGEABLE = {"summary", "about me", "experience", "skills", "projects", "profile", "objective"}
 
 
 def split_sections(markdown: str) -> dict[str, str]:

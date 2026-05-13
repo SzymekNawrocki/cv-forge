@@ -1,25 +1,29 @@
 from __future__ import annotations
+import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import Skill
 
 
-async def list_skills(session: AsyncSession) -> list[Skill]:
-    result = await session.execute(select(Skill).order_by(Skill.created_at))
+async def list_skills(session: AsyncSession, user_id: uuid.UUID | None = None) -> list[Skill]:
+    stmt = select(Skill).order_by(Skill.created_at)
+    if user_id is not None:
+        stmt = stmt.where(Skill.user_id == user_id)
+    result = await session.execute(stmt)
     return list(result.scalars().all())
 
 
-async def create_skill(category: str, items: list[str], session: AsyncSession) -> Skill:
-    skill = Skill(category=category, items=items)
+async def create_skill(category: str, items: list[str], session: AsyncSession, user_id: uuid.UUID) -> Skill:
+    skill = Skill(category=category, items=items, user_id=user_id)
     session.add(skill)
     await session.commit()
     await session.refresh(skill)
     return skill
 
 
-async def update_skill(skill_id: int, category: str | None, items: list[str] | None, session: AsyncSession) -> Skill:
+async def update_skill(skill_id: int, category: str | None, items: list[str] | None, session: AsyncSession, user_id: uuid.UUID) -> Skill:
     skill = await session.get(Skill, skill_id)
-    if skill is None:
+    if skill is None or skill.user_id != user_id:
         raise ValueError(f"Skill {skill_id} not found")
     if category is not None:
         skill.category = category
@@ -30,9 +34,9 @@ async def update_skill(skill_id: int, category: str | None, items: list[str] | N
     return skill
 
 
-async def delete_skill(skill_id: int, session: AsyncSession) -> None:
+async def delete_skill(skill_id: int, session: AsyncSession, user_id: uuid.UUID) -> None:
     skill = await session.get(Skill, skill_id)
-    if skill is None:
+    if skill is None or skill.user_id != user_id:
         raise ValueError(f"Skill {skill_id} not found")
     await session.delete(skill)
     await session.commit()

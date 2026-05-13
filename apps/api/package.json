@@ -1,8 +1,8 @@
 {
   "name": "api",
   "scripts": {
-    "init-db": "python init_db.py",
-    "dev": "uvicorn main:app --reload --port 8000",
+    "init-db": ".venv\\Scripts\\python.exe init_db.py",
+    "dev": ".venv\\Scripts\\python.exe -m uvicorn main:app --reload --port 8000",
     "build": "echo 'Python — no build step'"
   }
 }
