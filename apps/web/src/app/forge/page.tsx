@@ -258,9 +258,9 @@ export default function ForgePage() {
 
   return (
     <main style={{
-      flex: 1, display: 'flex', flexDirection: 'column',
+      height: 'calc(100vh - 52px)', display: 'flex', flexDirection: 'column',
       padding: '24px 32px 24px', gap: '18px',
-      background: '#0D0D0E', minHeight: 0,
+      background: '#0D0D0E', overflow: 'hidden',
     }}>
 
       {/* ── Header bar ── */}

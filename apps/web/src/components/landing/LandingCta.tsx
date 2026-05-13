@@ -74,7 +74,7 @@ export function LandingCta() {
             Open CV Forge →
           </a>
           <a
-            href="/profile"
+            href="/cv-manager"
             style={{
               fontFamily: '"IBM Plex Sans", sans-serif',
               fontSize: '13px',
