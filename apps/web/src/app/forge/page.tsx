@@ -1,11 +1,19 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useMemo, useTransition } from "react";
 import dynamic from "next/dynamic";
+import useSWR from "swr";
 import { fetchMasterCVs, forgeCV, type MasterCV, type TailoredCV } from "@/lib/api";
 import type { CVData, CVSection } from "@/components/CVDocument";
 
-const CVViewer = dynamic(() => import("@/components/CVViewer"), { ssr: false });
+const CVViewer = dynamic(() => import("@/components/CVViewer"), {
+  ssr: false,
+  loading: () => (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#5C5C70", fontFamily: '"IBM Plex Sans", sans-serif', fontSize: "13px" }}>
+      Loading preview...
+    </div>
+  ),
+});
 
 const F = {
   display: '"Barlow Condensed", sans-serif',
@@ -218,7 +226,7 @@ function CVEditor({ data, onChange }: { data: CVData; onChange: (d: CVData) => v
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ForgePage() {
-  const [cvs, setCVs] = useState<MasterCV[]>([]);
+  const { data: cvs = [] } = useSWR<MasterCV[]>("masterCVs", fetchMasterCVs);
   const [selectedId, setSelectedId] = useState<number | "">("");
   const [jdText, setJdText] = useState("");
   const [result, setResult] = useState<TailoredCV | null>(null);
@@ -229,11 +237,8 @@ export default function ForgePage() {
   const [rightTab, setRightTab] = useState<'preview' | 'edit'>('preview');
 
   useEffect(() => {
-    fetchMasterCVs().then((data) => {
-      setCVs(data);
-      if (data.length > 0) setSelectedId(data[0].id);
-    }).catch(() => {});
-  }, []);
+    if (cvs.length > 0 && selectedId === "") setSelectedId(cvs[0].id);
+  }, [cvs, selectedId]);
 
   function handleForge() {
     if (!selectedId || !jdText.trim()) return;
@@ -253,7 +258,10 @@ export default function ForgePage() {
     });
   }
 
-  const cvData = editedData ?? (result ? parseCVData(result) : null);
+  const cvData = useMemo(
+    () => editedData ?? (result ? parseCVData(result) : null),
+    [editedData, result],
+  );
   const disabled = isPending || !selectedId || !jdText.trim();
 
   return (

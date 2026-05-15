@@ -1,18 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { getCurrentUser, logout, type CurrentUser } from "@/lib/api";
 
 export default function UserMenu() {
   const router = useRouter();
-  const [user, setUser] = useState<CurrentUser | null>(null);
-
-  useEffect(() => {
-    getCurrentUser()
-      .then(setUser)
-      .catch(() => {});
-  }, []);
+  const { data: user } = useSWR<CurrentUser>("currentUser", getCurrentUser);
 
   async function handleLogout() {
     await logout();

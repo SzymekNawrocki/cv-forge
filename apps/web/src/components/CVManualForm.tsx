@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useTransition } from "react";
+import useSWR from "swr";
 import {
   fetchSkills,
   createCV,
@@ -310,13 +311,12 @@ export default function CVManualForm({ profile, onSuccess }: Props) {
   const [isPending, startTransition] = useTransition();
 
   // Pre-populate skills from DB
+  const { data: dbSkills = [] } = useSWR("skills", fetchSkills);
   useEffect(() => {
-    fetchSkills().then((dbSkills) => {
-      if (dbSkills.length > 0) {
-        setSkills(dbSkills.map((s) => ({ category: s.category, items: [...s.items] })));
-      }
-    }).catch(() => {});
-  }, []);
+    if (dbSkills.length > 0) {
+      setSkills(dbSkills.map((s) => ({ category: s.category, items: [...s.items] })));
+    }
+  }, [dbSkills]);
 
   // Sync header from profile if profile loads after mount
   useEffect(() => {

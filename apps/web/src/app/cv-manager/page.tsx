@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import dynamic from "next/dynamic";
+import useSWR from "swr";
 import {
   fetchMasterCVs,
   importCV,
@@ -13,7 +14,14 @@ import {
   type UserProfile,
 } from "@/lib/api";
 
-const CVManualForm = dynamic(() => import("@/components/CVManualForm"), { ssr: false });
+const CVManualForm = dynamic(() => import("@/components/CVManualForm"), {
+  ssr: false,
+  loading: () => (
+    <p style={{ fontFamily: '"IBM Plex Sans", sans-serif', fontSize: "13px", color: "#5C5C70", padding: "32px 0" }}>
+      Loading form...
+    </p>
+  ),
+});
 
 const F = {
   display: '"Barlow Condensed", sans-serif',
@@ -67,9 +75,12 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export default function CVManagerPage() {
   const [section, setSection] = useState<Section>("cvs");
 
-  // CVs state
-  const [cvs, setCVs] = useState<MasterCV[]>([]);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  // Remote data via SWR
+  const { data: cvs = [], mutate: mutateCVs } = useSWR<MasterCV[]>("masterCVs", fetchMasterCVs);
+  const { data: profile, mutate: mutateProfile } = useSWR<UserProfile>("profile", getProfile, { revalidateOnFocus: false });
+  const profileLoaded = profile !== undefined;
+
+  // Local CV state
   const [selected, setSelected] = useState<MasterCV | null>(null);
   const [tab, setTab] = useState<Tab>("import");
   const [title, setTitle] = useState("");
@@ -83,31 +94,29 @@ export default function CVManagerPage() {
   const [isPending, startTransition] = useTransition();
   const [importBtnHovered, setImportBtnHovered] = useState(false);
 
-  // Profile state
+  // Local profile form state
   const [profileForm, setProfileForm] = useState({ name: "", job_title: "", email: "", phone: "", location: "", github_url: "", portfolio_url: "" });
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [profileLoaded, setProfileLoaded] = useState(false);
   const [profilePending, startProfileTransition] = useTransition();
 
+  // Sync local form state from profile on first load (one-time)
+  const profileSynced = useRef(false);
   useEffect(() => {
-    fetchMasterCVs().then(setCVs).catch(() => setCVs([]));
-    getProfile().then((p) => {
-      setProfile(p);
-      setImportGithub(p.github_url ?? "");
-      setImportPortfolio(p.portfolio_url ?? "");
-      setProfileForm({
-        name: p.name ?? "",
-        job_title: p.job_title ?? "",
-        email: p.email ?? "",
-        phone: p.phone ?? "",
-        location: p.location ?? "",
-        github_url: p.github_url ?? "",
-        portfolio_url: p.portfolio_url ?? "",
-      });
-      setProfileLoaded(true);
-    }).catch(() => setProfileLoaded(true));
-  }, []);
+    if (!profile || profileSynced.current) return;
+    profileSynced.current = true;
+    setImportGithub(profile.github_url ?? "");
+    setImportPortfolio(profile.portfolio_url ?? "");
+    setProfileForm({
+      name: profile.name ?? "",
+      job_title: profile.job_title ?? "",
+      email: profile.email ?? "",
+      phone: profile.phone ?? "",
+      location: profile.location ?? "",
+      github_url: profile.github_url ?? "",
+      portfolio_url: profile.portfolio_url ?? "",
+    });
+  }, [profile]);
 
   useEffect(() => {
     if (selected) {
@@ -124,7 +133,7 @@ export default function CVManagerPage() {
     startTransition(async () => {
       try {
         await deleteCV(cv.id);
-        setCVs((prev) => prev.filter((c) => c.id !== cv.id));
+        mutateCVs(cvs.filter((c) => c.id !== cv.id), { revalidate: false });
         if (selected?.id === cv.id) setSelected(null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Delete failed");
@@ -138,7 +147,7 @@ export default function CVManagerPage() {
     startTransition(async () => {
       try {
         const cv = await importCV(title.trim(), rawText.trim(), importGithub.trim() || undefined, importPortfolio.trim() || undefined);
-        setCVs((prev) => [cv, ...prev]);
+        mutateCVs([cv, ...cvs], { revalidate: false });
         setTitle(""); setRawText("");
         setSelected(cv);
       } catch (e) {
@@ -148,7 +157,7 @@ export default function CVManagerPage() {
   }
 
   function handleManualSuccess(cv: MasterCV) {
-    setCVs((prev) => [cv, ...prev]);
+    mutateCVs([cv, ...cvs], { revalidate: false });
     setSelected(cv);
   }
 
@@ -157,7 +166,7 @@ export default function CVManagerPage() {
     startTransition(async () => {
       try {
         const updated = await updateCVLinks(selected.id, linkGithub.trim() || null, linkPortfolio.trim() || null);
-        setCVs((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+        mutateCVs(cvs.map((c) => (c.id === updated.id ? updated : c)), { revalidate: false });
         setSelected(updated);
         setEditLinks(false);
       } catch (e) {
@@ -186,6 +195,7 @@ export default function CVManagerPage() {
           github_url: profileForm.github_url || null,
           portfolio_url: profileForm.portfolio_url || null,
         } as Partial<UserProfile>);
+        mutateProfile();
         setProfileSaved(true);
         setTimeout(() => setProfileSaved(false), 2500);
       } catch (e) {
@@ -435,7 +445,7 @@ export default function CVManagerPage() {
                   </button>
                 </>
               ) : (
-                <CVManualForm profile={profile} onSuccess={handleManualSuccess} />
+                <CVManualForm profile={profile ?? null} onSuccess={handleManualSuccess} />
               )}
             </>
           )
