@@ -13,7 +13,22 @@ export default function UserMenu() {
     router.push("/login");
   }
 
-  if (!user) return null;
+  if (!user) return (
+    <a
+      href="/login"
+      style={{
+        padding: "5px 12px",
+        background: "transparent",
+        border: "1px solid #2A2A2E",
+        borderRadius: "5px",
+        color: "#999",
+        fontSize: "12px",
+        textDecoration: "none",
+      }}
+    >
+      Sign in
+    </a>
+  );
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
