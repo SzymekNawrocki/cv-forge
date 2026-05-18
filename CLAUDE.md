@@ -1,7 +1,7 @@
 # CV Forge — CLAUDE.md
 
 ## Project Mission
-AI tool for entry-level candidates. Takes a **Master CV** (Markdown) + a **Job Description**, uses the Gemini API to surgically rewrite CV sections for ATS compatibility and professional impact.
+AI tool for entry-level candidates. Takes a **Master CV** (Markdown) + a **Job Description**, uses the OpenRouter API to aggressively rewrite CV sections for maximum ATS keyword coverage. The user reviews AI output and removes inaccurate claims themselves.
 
 ## Tech Stack
 - **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS v4 — `apps/web`
@@ -14,10 +14,10 @@ AI tool for entry-level candidates. Takes a **Master CV** (Markdown) + a **Job D
 ```
 apps/api/
 ├── main.py                     ← FastAPI entry; runs create_all + idempotent ALTER TABLE migrations on startup
-├── .env                        ← DATABASE_URL, GEMINI_API_KEY
+├── .env                        ← DATABASE_URL, OPENROUTER_API_KEY
 ├── requirements.txt
 ├── ai/
-│   ├── client.py               ← GeminiClient (alias: OllamaClient): methods return typed schema objects, not raw dicts
+│   ├── client.py               ← OpenRouterClient (alias: OllamaClient): methods return typed schema objects, not raw dicts
 │   ├── prompts.py              ← Prompt templates (ANALYZE_JD, FORGE_SECTION, CLEAN_CV, MATCH_SCORE, PARSE_ENTRIES, FORMAT_CV_JSON)
 │   └── schemas.py              ← Pydantic AI response models: JDAnalysis, ForgeResult, MatchScore, CleanCVResult, ParsedEntries, WorkEntry
 ├── db/
@@ -84,16 +84,16 @@ Role | Date Range
 Rules:
 - `# Name` on line 1 — single `#` only. `## #` or `## ##` are double-prefix bugs.
 - Contact info as plain lines BEFORE the first `##` section — `split_sections()` puts this in the "header" key, parsed by `_extract_header()`.
-- `FORGE_SECTION_PROMPT` rule 4: rewritten output must NOT include the `##` heading — `merge_sections()` adds it. If Gemini includes it, double-wrapping corrupts all subsequent parsing.
+- `FORGE_SECTION_PROMPT` rule 3: rewritten output must NOT include the `##` heading — `merge_sections()` adds it. If the model includes it, double-wrapping corrupts all subsequent parsing.
 - `_normalize_cv_markdown()` in `forge_service.py` strips `## #→#` and `##  ##→##` as a safety net after `clean_cv`.
 - Education is `bullets` type (not `entries`) — matches original CV's `**Institution:** degree | years` format.
 
 ## UserProfile Architecture
 
-`UserProfile` table: `id`, `name`, `job_title`, `email`, `phone`, `location`, `github_url`, `portfolio_url`, `updated_at`. **Singleton** — always one row (id=1), created on first `GET /profile/`.
+`UserProfile` table: `id`, `name`, `job_title`, `email`, `phone`, `location`, `github_url`, `portfolio_url`, `preferred_model`, `updated_at`. **Singleton per user** — one row per user, created on first `GET /profile/`.
 
-- Managed via `/profile` page.
 - `github_url` and `portfolio_url` are global defaults — auto-filled into new CV forms (both import and manual).
+- `preferred_model` — OpenRouter model ID chosen in `/settings`. `run_forge()` reads this and instantiates `OllamaClient(preferred_model=...)`. Defaults to `google/gemini-2.5-pro-exp-03-25:free` if null.
 - Each `MasterCV` stores its own `github_url` and `portfolio_url` columns for **per-CV override**. Editable inline on the CV card in `/cv-manager`.
 - At forge time, `build_cv_json()` reads links from `MasterCV` columns (not from parsing markdown). Old CVs without explicit links fall back to regex extraction from the markdown header.
 
@@ -112,15 +112,15 @@ Two paths — both produce a `MasterCV` row:
 
 | Path | Endpoint | AI call? | Links source |
 |---|---|---|---|
-| Import raw text | `POST /cv/import` | Yes — `clean_cv` (Gemini) | From request body (pre-filled from UserProfile in UI) |
+| Import raw text | `POST /cv/import` | Yes — `clean_cv` (OpenRouter, default model) | From request body (pre-filled from UserProfile in UI) |
 | Manual form | `POST /cv/create` | **No** — `_form_to_markdown()` generates canonical markdown directly | From form fields (pre-filled from UserProfile) |
 
-`_form_to_markdown()` in `forge_service.py` converts `CVFormData` to canonical markdown. No Gemini call — data is already structured.
+`_form_to_markdown()` in `forge_service.py` converts `CVFormData` to canonical markdown. No AI call — data is already structured.
 
 ## Forge Loop
-1. `POST /cv/import` — raw text + optional `github_url`/`portfolio_url` → `clean_cv` (Gemini) → `_normalize_cv_markdown()` → `MasterCV` saved with explicit link fields
+1. `POST /cv/import` — raw text + optional `github_url`/`portfolio_url` → `clean_cv` (OpenRouter default model) → `_normalize_cv_markdown()` → `MasterCV` saved with explicit link fields
    **OR** `POST /cv/create` — structured `CVFormData` → `_form_to_markdown()` → `MasterCV` saved directly (no AI)
-2. `POST /cv/forge` — select `MasterCV` + paste JD → `analyze_jd` (Gemini) extracts keywords + `job_title` → `calculate_match_score` (Gemini) scores original CV → **if `Skill` rows exist AND CV has no skills content**, replace Skills section with full DB skills list → `forge_section` (Gemini) rewrites each FORGEABLE section (body only, no `##` heading) → `merge_sections()` reconstructs markdown → `calculate_match_score` (Gemini) scores tailored CV → `build_cv_json(md, ollama, github_url=cv.github_url, portfolio_url=cv.portfolio_url)` (Python + Gemini `parse_entries_section` for Work Experience) converts tailored markdown to structured JSON, preferring explicit links → `TailoredCV` saved with `content_json`, `initial_match_score`, `match_score`
+2. `POST /cv/forge` — `run_forge()` reads `UserProfile.preferred_model` → instantiates `OllamaClient(preferred_model=...)` → `analyze_jd` extracts keywords + `job_title` → `calculate_match_score` scores original CV → **if `Skill` rows exist AND CV has no skills content**, replace Skills section with full DB skills list → `forge_section` **aggressively** rewrites each FORGEABLE section adding JD keywords even if absent from original (body only, no `##` heading) → `merge_sections()` reconstructs markdown → `calculate_match_score` scores tailored CV → `build_cv_json(md, ollama, github_url=cv.github_url, portfolio_url=cv.portfolio_url)` converts tailored markdown to structured JSON → `TailoredCV` saved with `content_json`, `initial_match_score`, `match_score`
 
 ## Frontend Pages (`apps/web/src/app`)
 | Route | Description |
@@ -130,14 +130,14 @@ Two paths — both produce a `MasterCV` row:
 | `/cv-manager` | Two tabs: "Import Text" (paste raw + AI clean) or "Fill In Manually" (structured form). Browse saved CVs in sidebar; inline link editor per CV card. |
 | `/skills` | Skills DB manager — add/edit/delete skill categories with tag-input UI |
 | `/forge` | JD input (left) / PDF preview + inline editor (right) + Before→After score badges + Download PDF |
-| `/profile` | Global profile settings — name, job title, contact info, GitHub URL, portfolio URL. Auto-fills new CV forms. |
+| `/settings` | App-wide settings — AI model selector (5 free OpenRouter models). Saves to `UserProfile.preferred_model` via `PUT /profile/`. |
 
 All API calls go through `src/lib/api.ts`. Client Components only at leaf level.
 - `APIError` class in `api.ts`: `new APIError(status, body)` — has `.isNotFound` and `.isServerError` helpers. All fetch wrappers use `handleResponse(res)` which throws `APIError` on non-2xx. Catch with `e instanceof APIError` to branch on status code.
 
 ## Frontend Dependencies
 - `@react-pdf/renderer` — renders `TailoredCV.content_json` as a real PDF in the browser
-- `CVDocument.tsx` (`src/components/`) — @react-pdf/renderer Document; **Roboto font** (Latin + Latin Extended — full Polish support: ą ć ę ł ń ó ś ź ż), two-column header with icon boxes, uppercase section dividers. `BoldText` renders `**bold**` markdown; bold text in PROJECTS and CERTIFICATIONS sections is also underlined (`underlineBold` prop, driven by `UNDERLINE_BOLD_SECTIONS` set).
+- `CVDocument.tsx` (`src/components/`) — @react-pdf/renderer Document; **Roboto font** (Latin + Latin Extended — full Polish support: ą ć ę ł ń ó ś ź ż), two-column header with icon boxes, uppercase section dividers. `BoldText` renders `**bold**` markdown; bold text in PROJECTS and CERTIFICATIONS sections is also underlined (`underlineBold` prop, driven by `UNDERLINE_BOLD_SECTIONS` set). Portfolio and GitHub are rendered as separate blue underlined `<Link>` rows (clickable in PDF), with `https://` stripped from display text.
 - `CVManualForm.tsx` (`src/components/`) — structured form for manual CV creation. Dynamic arrays (map-based) for work experience, projects, education, languages, certifications. Chip/tag input for skills (pre-populated from Skills DB; user selects subset). Pre-fills header fields from UserProfile. Dynamically imported with `ssr: false`.
 - `CVViewer.tsx` (`src/components/`) — `"use client"` wrapper with `PDFViewer` (WYSIWYG preview) + `PDFDownloadLink`; dynamically imported with `ssr: false` in forge page
 - Font files: `apps/web/public/fonts/Roboto-{Regular,Bold,Italic,BoldItalic}.ttf` — merged latin + latin-ext subsets via fonttools (Python). Registered via `Font.register()` using `window.location.origin` base URL (safe since CVDocument is browser-only via ssr:false).
@@ -155,14 +155,17 @@ All API calls go through `src/lib/api.ts`. Client Components only at leaf level.
 Turbo config: `--concurrency=3` (2 persistent tasks require ≥3), `init-db` task is non-persistent/no-cache, `dev` task `dependsOn: ["init-db"]`.
 
 ## Development Rules
-- **AI Provider Cascade**: All AI calls go through `GeminiClient._generate_json()` which tries providers in order on 429 rate-limit errors:
-  1. `gemini-2.5-flash` — primary (15 RPM free tier)
-  2. `gemini-2.5-flash-lite` — intermediate (30 RPM free tier, same Gemini key)
-  3. `groq/llama-3.3-70b-versatile` — final fallback (30 RPM free tier, requires `GROQ_API_KEY` in `.env`, free key at console.groq.com)
-- **Gemini SDK**: Use `google-genai` (not the deprecated `google-generativeai`). Import: `from google import genai`.
-- **Groq SDK**: `groq>=0.9.0` — `AsyncGroq` client, `response_format={"type": "json_object"}` for JSON mode.
-- **JSON Only**: Gemini calls use `response_mime_type="application/json"`; Groq calls use `response_format={"type": "json_object"}`. Parse with `_parse_json()` in `ai/client.py`.
-- **AI Response Schemas**: Every `GeminiClient` method returns a typed Pydantic object from `ai/schemas.py` — never a raw dict. Add new AI calls by: (1) defining a schema in `ai/schemas.py`, (2) calling `Schema.model_validate(raw)` inside the client method. `MatchScore.clamp_score` validator enforces 0–100 range.
+- **AI Provider**: All AI calls go through `OpenRouterClient._generate_json()` (aliased as `OllamaClient`). Uses `openai` SDK pointed at `https://openrouter.ai/api/v1` with `OPENROUTER_API_KEY`. On 429/rate-limit errors, cascades through 5 free models in order:
+  1. `google/gemini-2.5-pro-exp-03-25:free` — default primary
+  2. `meta-llama/llama-4-maverick:free`
+  3. `deepseek/deepseek-chat-v3-0324:free`
+  4. `meta-llama/llama-4-scout:free`
+  5. `deepseek/deepseek-r1:free`
+  User's `preferred_model` (from `UserProfile`) overrides the primary; cascade skips it and tries remaining 4.
+- **OpenRouter SDK**: `openai>=1.30.0` — `AsyncOpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")`. Always pass `extra_headers={"HTTP-Referer": "https://cv-forge.app", "X-Title": "CV Forge"}` — required by OpenRouter for free models.
+- **JSON Only**: All calls use `response_format={"type": "json_object"}` + system prompt enforcing JSON-only response. Parse with `_parse_json()` in `ai/client.py`.
+- **AI Response Schemas**: Every `OpenRouterClient` method returns a typed Pydantic object from `ai/schemas.py` — never a raw dict. Add new AI calls by: (1) defining a schema in `ai/schemas.py`, (2) calling `Schema.model_validate(raw)` inside the client method. `MatchScore.clamp_score` validator enforces 0–100 range.
+- **Aggressive Forge**: `FORGE_SECTION_PROMPT` has NO anti-fabrication rule. AI freely adds skills and experience language from the JD even if absent from the original CV. The user reviews output in the Edit tab and removes inaccurate claims.
 - **DB init**: `create_all` runs in two places — `init_db.py` (pre-dev) and `main.py` lifespan (idempotent safety net). No Alembic yet. New columns on existing tables are added via `ALTER TABLE … ADD COLUMN IF NOT EXISTS` in both places (idempotent — safe to run repeatedly).
 - **TDD**: Tests in `apps/api/tests/` using pytest-asyncio. Pure (no-IO) functions tested in `test_cv_pure.py` — no mocks needed. Run: `apps/api/.venv/Scripts/python.exe -m pytest tests/ -v`.
 - **Skills**: Matt Pocock skills installed in `.claude/skills/`.
