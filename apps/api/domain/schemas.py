@@ -67,6 +67,7 @@ class UserProfileUpdate(BaseModel):
     location: str | None = None
     github_url: str | None = None
     portfolio_url: str | None = None
+    preferred_model: str | None = None
 
 
 class UserProfileRead(UserProfileUpdate):

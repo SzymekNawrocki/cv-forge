@@ -80,11 +80,10 @@ async def forge(
     request: Request,
     body: ForgeRequest,
     session: AsyncSession = Depends(get_session),
-    ollama: OllamaClient = Depends(_ollama),
     user: User = Depends(current_active_verified_user),
 ):
     try:
-        return await run_forge(body.master_cv_id, body.job_description_text, ollama, session, user_id=user.id)
+        return await run_forge(body.master_cv_id, body.job_description_text, session, user_id=user.id)
     except ValueError as e:
         raise HTTPException(404, str(e))
 

@@ -3,11 +3,10 @@ import json
 import logging
 import os
 import re
-from google import genai
+from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
-from google.genai import types
-from groq import AsyncGroq
+
 from ai.prompts import (
     ANALYZE_JD_PROMPT,
     CLEAN_CV_PROMPT,
@@ -24,35 +23,29 @@ from ai.schemas import (
     ParsedEntries,
 )
 
-GEMINI_MODEL = "gemini-2.5-flash"
-GEMINI_LITE_MODEL = "gemini-2.5-flash-lite"
-GROQ_MODEL = "llama-3.3-70b-versatile"
+FREE_MODELS = [
+    "google/gemini-2.5-pro-exp-03-25:free",
+    "meta-llama/llama-4-maverick:free",
+    "deepseek/deepseek-chat-v3-0324:free",
+    "meta-llama/llama-4-scout:free",
+    "deepseek/deepseek-r1:free",
+]
+DEFAULT_MODEL = "google/gemini-2.5-pro-exp-03-25:free"
 
-_gemini_client: genai.Client | None = None
-_groq_client: AsyncGroq | None = None
+_OPENROUTER_BASE = "https://openrouter.ai/api/v1"
+_EXTRA_HEADERS = {"HTTP-Referer": "https://cv-forge.app", "X-Title": "CV Forge"}
+
+_openrouter_client: AsyncOpenAI | None = None
 
 
-def _get_gemini_client() -> genai.Client:
-    global _gemini_client
-    if _gemini_client is None:
-        api_key = os.getenv("GEMINI_API_KEY")
+def _get_client() -> AsyncOpenAI:
+    global _openrouter_client
+    if _openrouter_client is None:
+        api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
-            raise RuntimeError("GEMINI_API_KEY not set in environment")
-        _gemini_client = genai.Client(api_key=api_key)
-    return _gemini_client
-
-
-def _get_groq_client() -> AsyncGroq:
-    global _groq_client
-    if _groq_client is None:
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise RuntimeError(
-                "All Gemini quotas exhausted and GROQ_API_KEY is not set. "
-                "Get a free key at console.groq.com and add GROQ_API_KEY=... to apps/api/.env"
-            )
-        _groq_client = AsyncGroq(api_key=api_key)
-    return _groq_client
+            raise RuntimeError("OPENROUTER_API_KEY not set in environment")
+        _openrouter_client = AsyncOpenAI(api_key=api_key, base_url=_OPENROUTER_BASE)
+    return _openrouter_client
 
 
 def _is_transient_error(e: Exception) -> bool:
@@ -63,41 +56,34 @@ def _is_transient_error(e: Exception) -> bool:
     ))
 
 
-_JSON_CONFIG = types.GenerateContentConfig(
-    response_mime_type="application/json"
-)
+class OpenRouterClient:
+    def __init__(self, preferred_model: str | None = None):
+        self.model = preferred_model or DEFAULT_MODEL
 
-
-class GeminiClient:
     async def _generate_json(self, prompt: str) -> dict:
-        # Cascade: Gemini Flash -> Gemini Flash Lite -> Groq Llama 3.3 70B
-        for model in [GEMINI_MODEL, GEMINI_LITE_MODEL]:
+        cascade = [self.model] + [m for m in FREE_MODELS if m != self.model]
+        client = _get_client()
+        for model in cascade:
             try:
-                response = await _get_gemini_client().aio.models.generate_content(
+                logger.info("[OpenRouter] Trying %s...", model)
+                response = await client.chat.completions.create(
                     model=model,
-                    contents=prompt,
-                    config=_JSON_CONFIG,
+                    messages=[
+                        {"role": "system", "content": "Respond with valid JSON only. No markdown fences, no explanation."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.6,
+                    max_tokens=8192,
+                    extra_headers=_EXTRA_HEADERS,
                 )
-                return _parse_json(response.text)
+                return _parse_json(response.choices[0].message.content)
             except Exception as e:
                 if _is_transient_error(e):
-                    logger.warning("[AI] %s transient error (%s), trying next provider...", model, type(e).__name__)
+                    logger.warning("[OpenRouter] %s rate-limited (%s), trying next...", model, type(e).__name__)
                     continue
                 raise
-
-        logger.warning("[AI] Gemini quotas exhausted, falling back to Groq llama-3.3-70b-versatile...")
-        groq = _get_groq_client()
-        response = await groq.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[
-                {"role": "system", "content": "Respond with valid JSON only. No markdown, no explanation."},
-                {"role": "user", "content": prompt},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.6,
-            max_tokens=4096,
-        )
-        return _parse_json(response.choices[0].message.content)
+        raise RuntimeError("All OpenRouter free models exhausted — try again later.")
 
     async def analyze_jd(self, jd_text: str) -> JDAnalysis:
         raw = await self._generate_json(ANALYZE_JD_PROMPT.format(jd_text=jd_text))
@@ -164,11 +150,7 @@ class GeminiClient:
         return [entry.model_dump() for entry in ParsedEntries.model_validate(raw).entries]
 
 
-# Alias so existing import sites (routers/cv.py, forge_service.py) need no changes
-OllamaClient = GeminiClient
-
-# Keep backward-compat name used in some routers
-_get_client = _get_gemini_client
+OllamaClient = OpenRouterClient
 
 
 def _parse_json(raw: str) -> dict:

@@ -27,6 +27,7 @@ class UserProfile(Base):
     location: Mapped[str | None] = mapped_column(String(255))
     github_url: Mapped[str | None] = mapped_column(String(500))
     portfolio_url: Mapped[str | None] = mapped_column(String(500))
+    preferred_model: Mapped[str | None] = mapped_column(String(100))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

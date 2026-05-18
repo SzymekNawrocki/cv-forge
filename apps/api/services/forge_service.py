@@ -11,6 +11,7 @@ from domain.cv_logic.cv_json_builder import build_cv_json
 from domain.schemas import CVFormData
 from ai.client import OllamaClient
 from services.skills_service import build_skills_markdown, list_skills
+from services.profile_service import get_or_create_profile
 
 logger = logging.getLogger(__name__)
 
@@ -173,10 +174,11 @@ async def create_cv_from_form(
 async def run_forge(
     master_cv_id: int,
     jd_text: str,
-    ollama: OllamaClient,
     session: AsyncSession,
     user_id: uuid.UUID,
 ) -> TailoredCV:
+    profile = await get_or_create_profile(session, user_id)
+    ollama = OllamaClient(preferred_model=profile.preferred_model)
     cv = await session.get(MasterCV, master_cv_id)
     if cv is None or cv.user_id != user_id:
         raise ValueError(f"MasterCV {master_cv_id} not found")

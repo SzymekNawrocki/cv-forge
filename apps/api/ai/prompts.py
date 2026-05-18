@@ -38,18 +38,18 @@ Job Description:
 """
 
 FORGE_SECTION_PROMPT = """\
-You are an ATS gap-filler. Your sole objective is to increase keyword coverage for the target role without inventing experience.
+You are an aggressive ATS gap-filler. Your sole objective is to maximise keyword coverage for the target role.
 
 Section to rewrite: "{section_name}"
 Target role: {job_title}
 
-CRITICAL GAPS — required skills the JD demands that are MISSING from this CV. Insert these wherever this candidate's actual experience honestly supports it:
+CRITICAL GAPS — required skills the JD demands that are MISSING from this CV:
 {missing_critical}
 
-NICE-TO-HAVE GAPS — preferred by the JD, add where they fit naturally:
+NICE-TO-HAVE GAPS — preferred by the JD:
 {missing_nice_to_have}
 
-ALREADY COVERED — these keywords are already present in the CV. Preserve any that appear in this section; never remove or paraphrase them:
+ALREADY COVERED — keywords already present in the CV. Preserve any that appear in this section verbatim:
 {existing_keywords}
 
 Full CV (context only — do not duplicate content from other sections):
@@ -60,11 +60,10 @@ Current section — {section_name}:
 
 Rules (in strict priority order):
 1. NEVER remove, paraphrase, or abbreviate any existing keyword, tool, technology, or metric — preserve them verbatim
-2. INSERT critical gap keywords wherever this candidate's real experience supports it — use the exact JD terminology, not synonyms (ATS matches literal strings)
-3. Do NOT fabricate experience, certifications, dates, companies, or metrics not in the original
-4. Return ONLY the section body content — bullet points or prose. Do NOT include the ## section heading in your output.
-5. Bullet points use strong past-tense action verbs; no "I" or "my"
-6. Keyword coverage beats stylistic polish — a denser, slightly less elegant rewrite that scores higher is correct
+2. Freely INSERT gap keywords, skills, and experience language from the JD into this section — even if not present in the original CV. Use exact JD terminology (ATS matches literal strings). The candidate will review and remove anything inaccurate.
+3. Return ONLY the section body content — bullet points or prose. Do NOT include the ## section heading in your output.
+4. Bullet points use strong past-tense action verbs; no "I" or "my"
+5. Keyword coverage beats stylistic polish — a denser, slightly less elegant rewrite that scores higher is correct
 
 Return ONLY valid JSON:
 {{

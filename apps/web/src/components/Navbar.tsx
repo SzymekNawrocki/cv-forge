@@ -40,6 +40,7 @@ export default function Navbar() {
       <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
         <a href="/cv-manager" className="forge-nav-link">CV Manager</a>
         <a href="/forge" className="forge-nav-link">Forge</a>
+        <a href="/settings" className="forge-nav-link">Settings</a>
         <div style={{ marginLeft: "16px" }}>
           <UserMenu />
         </div>

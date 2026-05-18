@@ -8,7 +8,7 @@ load_dotenv()
 
 _REQUIRED_VARS = (
     "DATABASE_URL",
-    "GEMINI_API_KEY",
+    "OPENROUTER_API_KEY",
     "JWT_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
@@ -49,6 +49,9 @@ _ALLOWED_ORIGINS = [
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(text(
+            "ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS preferred_model VARCHAR(100)"
+        ))
     logger.info("API Ready - Database Connected")
     yield
 

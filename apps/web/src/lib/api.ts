@@ -137,6 +137,7 @@ export interface UserProfile {
   location: string | null;
   github_url: string | null;
   portfolio_url: string | null;
+  preferred_model: string | null;
   updated_at: string;
 }
 

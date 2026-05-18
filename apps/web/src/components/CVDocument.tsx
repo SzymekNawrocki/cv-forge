@@ -1,4 +1,4 @@
-import { Document, Font, Page, Text, View, StyleSheet, type Styles } from "@react-pdf/renderer";
+import { Document, Font, Link, Page, Text, View, StyleSheet, type Styles } from "@react-pdf/renderer";
 
 // Roboto supports full Latin Extended (Polish ą ć ę ł ń ó ś ź ż)
 // Module is browser-only (dynamically imported with ssr:false)
@@ -109,6 +109,13 @@ const s = StyleSheet.create({
     fontWeight: 400,
     fontSize: 9,
     color: "#333333",
+  },
+  contactLink: {
+    fontFamily: "Roboto",
+    fontWeight: 400,
+    fontSize: 9,
+    color: "#2563a8",
+    textDecoration: "underline",
   },
   section: {
     marginBottom: 12,
@@ -275,14 +282,20 @@ export function CVDocument({ data }: { data: CVData }) {
                 <ContactIcon char="#" />
               </View>
             )}
-            {(contact.portfolio || contact.github) && (
+            {contact.portfolio && (
               <View style={s.contactRow}>
-                <Text style={s.contactLine}>
-                  {contact.portfolio && contact.github
-                    ? `${contact.portfolio} | ${contact.github}`
-                    : contact.portfolio || contact.github}
-                </Text>
-                <ContactIcon char="+" />
+                <Link src={contact.portfolio} style={s.contactLink}>
+                  {contact.portfolio.replace(/^https?:\/\//, "")}
+                </Link>
+                <ContactIcon char="W" />
+              </View>
+            )}
+            {contact.github && (
+              <View style={s.contactRow}>
+                <Link src={contact.github} style={s.contactLink}>
+                  {contact.github.replace(/^https?:\/\//, "")}
+                </Link>
+                <ContactIcon char="gh" />
               </View>
             )}
             {contact.location && (
