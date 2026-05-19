@@ -20,8 +20,15 @@ _params = {k: v for k, v in parse_qs(_parsed.query).items()
 _clean_query = urlencode({k: v[0] for k, v in _params.items()})
 _url = urlunparse(_parsed._replace(query=_clean_query))
 
-engine = create_async_engine(_url, pool_size=5, max_overflow=0, echo=False,
-                             connect_args={"ssl": True})
+engine = create_async_engine(
+    _url,
+    pool_size=5,
+    max_overflow=0,
+    pool_pre_ping=True,
+    pool_recycle=300,
+    echo=False,
+    connect_args={"ssl": True},
+)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
