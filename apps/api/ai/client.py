@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import time
 from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,31 @@ def _get_openrouter_client() -> AsyncOpenAI | None:
     return _openrouter_client
 
 
+_model_cooldowns: dict[str, float] = {}  # model -> monotonic expiry
+_COOLDOWN_SECONDS = 60.0
+
+
+def _is_cooling(model: str) -> bool:
+    expiry = _model_cooldowns.get(model)
+    if expiry is None:
+        return False
+    if time.monotonic() >= expiry:
+        del _model_cooldowns[model]
+        return False
+    return True
+
+
+def _set_cooldown(model: str) -> None:
+    _model_cooldowns[model] = time.monotonic() + _COOLDOWN_SECONDS
+
+
+def _is_rate_limit_error(e: Exception) -> bool:
+    msg = str(e).lower()
+    return any(kw in msg for kw in (
+        "429", "rate_limit", "quota", "resource_exhausted", "too many requests",
+    ))
+
+
 def _is_transient_error(e: Exception) -> bool:
     msg = str(e).lower()
     return any(kw in msg for kw in (
@@ -103,6 +129,9 @@ class OpenRouterClient:
             raise RuntimeError("No AI clients configured — set GROQ_API_KEY or OPENROUTER_API_KEY")
 
         for model, client, extra_headers in entries:
+            if _is_cooling(model):
+                logger.debug("Skipping %s (rate-limited, cooling down)", model)
+                continue
             try:
                 provider = "Groq" if client is groq else "OpenRouter"
                 logger.info("[%s] Trying %s...", provider, model)
@@ -128,6 +157,8 @@ class OpenRouterClient:
                     continue
             except Exception as e:
                 if _is_transient_error(e):
+                    if _is_rate_limit_error(e):
+                        _set_cooldown(model)
                     logger.warning("[%s] %s failed (%s), trying next...", provider, model, type(e).__name__)
                     continue
                 raise
