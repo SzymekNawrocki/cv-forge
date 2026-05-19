@@ -16,6 +16,10 @@ from services.profile_service import get_or_create_profile
 logger = logging.getLogger(__name__)
 
 
+class CVNotFoundError(Exception):
+    pass
+
+
 def _normalize_cv_markdown(md: str) -> str:
     """Strip double ## prefixes that Gemini sometimes produces in clean_cv output."""
     lines = []
@@ -177,24 +181,43 @@ async def run_forge(
     session: AsyncSession,
     user_id: uuid.UUID,
 ) -> TailoredCV:
+    # Phase 1: short DB transaction — load all needed data, commit JD early.
+    # This releases the connection before AI calls so Neon idle timeout can't kill it.
+    from ai.client import FREE_MODELS
     profile = await get_or_create_profile(session, user_id)
-    ollama = OllamaClient(preferred_model=profile.preferred_model)
+    preferred = profile.preferred_model
+    if preferred and preferred not in FREE_MODELS:
+        logger.warning("preferred_model %s is stale, resetting to default", preferred)
+        profile.preferred_model = None
+        await session.commit()
+        preferred = None
+    ollama = OllamaClient(preferred_model=preferred)
+
     cv = await session.get(MasterCV, master_cv_id)
     if cv is None or cv.user_id != user_id:
-        raise ValueError(f"MasterCV {master_cv_id} not found")
+        raise CVNotFoundError(f"MasterCV {master_cv_id} not found")
 
+    # Capture everything we need before commit expires the ORM objects
+    cv_markdown = cv.content_markdown
+    cv_github_url = cv.github_url
+    cv_portfolio_url = cv.portfolio_url
+
+    db_skills = await list_skills(session, user_id=user_id)
+
+    jd = JobDescription(raw_text=jd_text, user_id=user_id)
+    session.add(jd)
+    await session.commit()  # releases DB connection before AI calls
+    jd_id = jd.id
+
+    # Phase 2: all AI calls — no DB connection held
     analysis = await ollama.analyze_jd(jd_text)
     required_kw: list[str] = analysis.required_skills
     nice_kw: list[str] = analysis.nice_to_have
     keywords: list[str] = analysis.keywords + required_kw
     job_title: str = analysis.job_title
 
-    jd = JobDescription(raw_text=jd_text, extracted_keywords=", ".join(keywords), user_id=user_id)
-    session.add(jd)
-    await session.flush()
-
     before_result = await ollama.calculate_match_score(
-        cv.content_markdown, jd_text,
+        cv_markdown, jd_text,
         required_keywords=required_kw,
         nice_to_have_keywords=nice_kw,
     )
@@ -205,11 +228,9 @@ async def run_forge(
     missing_set = set(missing_critical + missing_nice_to_have)
     existing_keywords = [k for k in keywords if k not in missing_set]
 
-    sections = split_sections(cv.content_markdown)
+    sections = split_sections(cv_markdown)
 
     # Only inject full DB skills when CV has no existing skills content (Option B).
-    # Form-created CVs with explicit skill selections are preserved.
-    db_skills = await list_skills(session, user_id=user_id)
     if db_skills:
         skills_key = next((k for k in sections if k.lower() == "skills"), None)
         has_skills = bool(skills_key and sections.get(skills_key, "").strip())
@@ -224,7 +245,7 @@ async def run_forge(
                 section_content=content,
                 keywords=keywords,
                 job_title=job_title,
-                full_cv=cv.content_markdown,
+                full_cv=cv_markdown,
                 missing_critical=missing_critical,
                 missing_nice_to_have=missing_nice_to_have,
                 existing_keywords=existing_keywords,
@@ -249,14 +270,19 @@ async def run_forge(
 
     cv_json_result = await build_cv_json(
         tailored_md, ollama,
-        github_url=cv.github_url,
-        portfolio_url=cv.portfolio_url,
+        github_url=cv_github_url,
+        portfolio_url=cv_portfolio_url,
     )
     content_json = json.dumps(cv_json_result)
 
+    # Phase 3: short DB transaction — save results with a fresh connection
+    jd_obj = await session.get(JobDescription, jd_id)
+    if jd_obj:
+        jd_obj.extracted_keywords = ", ".join(keywords)
+
     tailored = TailoredCV(
         master_cv_id=master_cv_id,
-        job_desc_id=jd.id,
+        job_desc_id=jd_id,
         content_json=content_json,
         initial_match_score=initial_score,
         match_score=match_score,

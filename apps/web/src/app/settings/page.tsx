@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { getProfile, updateProfile, type UserProfile } from "@/lib/api";
 
 const FREE_MODELS: { id: string; label: string }[] = [
-  { id: "google/gemini-2.5-pro-exp-03-25:free", label: "Gemini 2.5 Pro (free) — recommended" },
-  { id: "meta-llama/llama-4-maverick:free", label: "Llama 4 Maverick (free)" },
-  { id: "deepseek/deepseek-chat-v3-0324:free", label: "DeepSeek Chat V3 (free)" },
-  { id: "meta-llama/llama-4-scout:free", label: "Llama 4 Scout (free)" },
-  { id: "deepseek/deepseek-r1:free", label: "DeepSeek R1 (free) — reasoning" },
+  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B — Groq (recommended)" },
+  { id: "qwen/qwen3-32b", label: "Qwen3 32B — Groq" },
+  { id: "meta-llama/llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout 17B — Groq" },
+  { id: "llama-3.1-8b-instant", label: "Llama 3.1 8B Instant — Groq (fastest)" },
+  { id: "google/gemma-4-26b-a4b-it:free", label: "Gemma 4 26B — OpenRouter (fallback)" },
 ];
 
-const DEFAULT_MODEL = "google/gemini-2.5-pro-exp-03-25:free";
+const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);

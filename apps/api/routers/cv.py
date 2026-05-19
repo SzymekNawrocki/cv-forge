@@ -9,6 +9,7 @@ from db.models import MasterCV, User
 from domain.schemas import CVFormData, MasterCVRead, TailoredCVRead
 from rate_limit import limiter
 from services.forge_service import (
+    CVNotFoundError,
     import_cv,
     create_cv_from_form,
     run_forge,
@@ -84,7 +85,7 @@ async def forge(
 ):
     try:
         return await run_forge(body.master_cv_id, body.job_description_text, session, user_id=user.id)
-    except ValueError as e:
+    except CVNotFoundError as e:
         raise HTTPException(404, str(e))
 
 

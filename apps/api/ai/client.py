@@ -23,28 +23,49 @@ from ai.schemas import (
     ParsedEntries,
 )
 
-FREE_MODELS = [
-    "google/gemini-2.5-pro-exp-03-25:free",
-    "meta-llama/llama-4-maverick:free",
-    "deepseek/deepseek-chat-v3-0324:free",
-    "meta-llama/llama-4-scout:free",
-    "deepseek/deepseek-r1:free",
+# Groq — primary (fast LPU inference, ~1-3s per call)
+_GROQ_BASE = "https://api.groq.com/openai/v1"
+GROQ_MODELS = [
+    "llama-3.3-70b-versatile",
+    "qwen/qwen3-32b",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "llama-3.1-8b-instant",
 ]
-DEFAULT_MODEL = "google/gemini-2.5-pro-exp-03-25:free"
 
+# OpenRouter — fallback when Groq is rate-limited
 _OPENROUTER_BASE = "https://openrouter.ai/api/v1"
-_EXTRA_HEADERS = {"HTTP-Referer": "https://cv-forge.app", "X-Title": "CV Forge"}
+_OPENROUTER_HEADERS = {"HTTP-Referer": "https://cv-forge.app", "X-Title": "CV Forge"}
+OPENROUTER_MODELS = [
+    "google/gemma-4-26b-a4b-it:free",
+    "google/gemma-4-31b-it:free",
+    "qwen/qwen3-next-80b-a3b-instruct:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+]
 
+FREE_MODELS = GROQ_MODELS + OPENROUTER_MODELS
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
+
+_groq_client: AsyncOpenAI | None = None
 _openrouter_client: AsyncOpenAI | None = None
 
 
-def _get_client() -> AsyncOpenAI:
+def _get_groq_client() -> AsyncOpenAI | None:
+    global _groq_client
+    if _groq_client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            return None
+        _groq_client = AsyncOpenAI(api_key=api_key, base_url=_GROQ_BASE, max_retries=0)
+    return _groq_client
+
+
+def _get_openrouter_client() -> AsyncOpenAI | None:
     global _openrouter_client
     if _openrouter_client is None:
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
-            raise RuntimeError("OPENROUTER_API_KEY not set in environment")
-        _openrouter_client = AsyncOpenAI(api_key=api_key, base_url=_OPENROUTER_BASE)
+            return None
+        _openrouter_client = AsyncOpenAI(api_key=api_key, base_url=_OPENROUTER_BASE, max_retries=0)
     return _openrouter_client
 
 
@@ -53,6 +74,9 @@ def _is_transient_error(e: Exception) -> bool:
     return any(kw in msg for kw in (
         "429", "rate_limit", "quota", "resource_exhausted", "too many requests",
         "503", "unavailable", "high demand", "try again",
+        "404", "no endpoints found", "not found",
+        "413", "payload too large", "request entity too large",
+        "decommissioned", "no longer supported",
     ))
 
 
@@ -61,11 +85,29 @@ class OpenRouterClient:
         self.model = preferred_model or DEFAULT_MODEL
 
     async def _generate_json(self, prompt: str) -> dict:
-        cascade = [self.model] + [m for m in FREE_MODELS if m != self.model]
-        client = _get_client()
-        for model in cascade:
+        # Build cascade: preferred model first, then remaining Groq, then OpenRouter fallback
+        groq_cascade = [self.model] if self.model in GROQ_MODELS else []
+        groq_cascade += [m for m in GROQ_MODELS if m != self.model]
+
+        or_cascade = [self.model] if self.model in OPENROUTER_MODELS else []
+        or_cascade += [m for m in OPENROUTER_MODELS if m != self.model]
+
+        groq = _get_groq_client()
+        openrouter = _get_openrouter_client()
+
+        entries: list[tuple[str, AsyncOpenAI, dict]] = []
+        if groq:
+            entries += [(m, groq, {}) for m in groq_cascade]
+        if openrouter:
+            entries += [(m, openrouter, _OPENROUTER_HEADERS) for m in or_cascade]
+
+        if not entries:
+            raise RuntimeError("No AI clients configured — set GROQ_API_KEY or OPENROUTER_API_KEY")
+
+        for model, client, extra_headers in entries:
             try:
-                logger.info("[OpenRouter] Trying %s...", model)
+                provider = "Groq" if client is groq else "OpenRouter"
+                logger.info("[%s] Trying %s...", provider, model)
                 response = await client.chat.completions.create(
                     model=model,
                     messages=[
@@ -75,15 +117,23 @@ class OpenRouterClient:
                     response_format={"type": "json_object"},
                     temperature=0.6,
                     max_tokens=8192,
-                    extra_headers=_EXTRA_HEADERS,
+                    extra_headers=extra_headers,
                 )
-                return _parse_json(response.choices[0].message.content)
+                content = response.choices[0].message.content if response.choices else None
+                if not content:
+                    logger.warning("[%s] %s returned empty response, trying next...", provider, model)
+                    continue
+                try:
+                    return _parse_json(content)
+                except json.JSONDecodeError:
+                    logger.warning("[%s] %s returned invalid JSON, trying next...", provider, model)
+                    continue
             except Exception as e:
                 if _is_transient_error(e):
-                    logger.warning("[OpenRouter] %s rate-limited (%s), trying next...", model, type(e).__name__)
+                    logger.warning("[%s] %s failed (%s), trying next...", provider, model, type(e).__name__)
                     continue
                 raise
-        raise RuntimeError("All OpenRouter free models exhausted — try again later.")
+        raise RuntimeError("All models exhausted — try again later.")
 
     async def analyze_jd(self, jd_text: str) -> JDAnalysis:
         raw = await self._generate_json(ANALYZE_JD_PROMPT.format(jd_text=jd_text))
