@@ -27,6 +27,19 @@ class MatchScore(BaseModel):
     def clamp_score(cls, v: float) -> float:
         return max(0.0, min(100.0, v))
 
+    @field_validator("missing_critical", "missing_nice_to_have", mode="before")
+    @classmethod
+    def flatten_nested(cls, v: object) -> list[str]:
+        if not isinstance(v, list):
+            return []
+        result: list[str] = []
+        for item in v:
+            if isinstance(item, list):
+                result.extend(str(x) for x in item if x)
+            elif item:
+                result.append(str(item))
+        return result
+
 
 class CleanCVResult(BaseModel):
     markdown: str = ""
