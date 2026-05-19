@@ -45,6 +45,41 @@ _ALLOWED_ORIGINS = [
 ]
 
 
+class PrivateNetworkMiddleware:
+    """Adds Access-Control-Allow-Private-Network: true to preflight responses.
+
+    Chrome 98+ sends Access-Control-Request-Private-Network on cross-port
+    localhost requests. Starlette's CORSMiddleware doesn't support this header
+    in the installed version, so we handle it in a thin outer ASGI wrapper.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = dict(scope.get("headers", []))
+        needs_pna = headers.get(b"access-control-request-private-network") == b"true"
+
+        if not needs_pna:
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_pna(message):
+            if message["type"] == "http.response.start":
+                message = {
+                    **message,
+                    "headers": list(message.get("headers", []))
+                    + [(b"access-control-allow-private-network", b"true")],
+                }
+            await send(message)
+
+        await self.app(scope, receive, send_with_pna)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
@@ -56,10 +91,42 @@ async def lifespan(app: FastAPI):
     yield
 
 
+class _CatchAllMiddleware:
+    """Converts any unhandled exception to a 500 JSON response.
+
+    Must be added before CORSMiddleware so it sits inside the CORS scope —
+    that way the 500 response travels back through CORSMiddleware's wrapped
+    send and receives Access-Control-Allow-Origin headers. Without this,
+    exceptions bubble past CORSMiddleware before any headers are written and
+    the browser sees a CORS error instead of a 500.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        try:
+            await self.app(scope, receive, send)
+        except Exception as exc:
+            logger.exception("Unhandled error")
+            response = JSONResponse(
+                status_code=500,
+                content={"detail": "Internal server error"},
+            )
+            await response(scope, receive, send)
+
+
 app = FastAPI(title="CV Forge API", version="0.1.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Middleware order: last add_middleware = outermost (runs first).
+# _CatchAllMiddleware must be added first so it ends up innermost —
+# inside CORSMiddleware — so its 500 responses get CORS headers.
+app.add_middleware(_CatchAllMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
@@ -67,12 +134,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
-
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+app.add_middleware(PrivateNetworkMiddleware)
 
 
 _frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
