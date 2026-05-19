@@ -127,6 +127,7 @@ export interface TailoredCV {
   content_json: string;
   initial_match_score: number | null;
   match_score: number | null;
+  gaps: string[];
 }
 
 export interface UserProfile {

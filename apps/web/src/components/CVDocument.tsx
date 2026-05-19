@@ -196,18 +196,26 @@ const UNDERLINE_BOLD_SECTIONS = new Set(["PROJECTS", "CERTIFICATIONS"]);
 
 function BoldText({ text, style, underlineBold = false }: { text: string; style: Styles[string]; underlineBold?: boolean }) {
   const cleaned = text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-  const parts = cleaned.split(/(\*\*[^*]+\*\*)/g);
+  const parts = cleaned.split(/(\*\*[^*]+\*\*|\[AI:[^\]]+\])/g);
   return (
     <Text style={style}>
-      {parts.map((part, i) =>
-        part.startsWith("**") && part.endsWith("**") ? (
-          <Text key={i} style={{ fontFamily: "Roboto", fontWeight: 700, ...(underlineBold ? { textDecoration: "underline" } : {}) }}>
-            {part.slice(2, -2)}
-          </Text>
-        ) : (
-          <Text key={i}>{part}</Text>
-        )
-      )}
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return (
+            <Text key={i} style={{ fontFamily: "Roboto", fontWeight: 700, ...(underlineBold ? { textDecoration: "underline" } : {}) }}>
+              {part.slice(2, -2)}
+            </Text>
+          );
+        }
+        if (/^\[AI:/i.test(part) && part.endsWith("]")) {
+          return (
+            <Text key={i} style={{ color: "#B45309", fontWeight: 700 }}>
+              {part.replace(/^\[AI:\s*/i, "").replace(/\]$/, "")}
+            </Text>
+          );
+        }
+        return <Text key={i}>{part}</Text>;
+      })}
     </Text>
   );
 }
@@ -226,7 +234,7 @@ function SectionBlock({ section }: { section: CVSection }) {
       <Text style={s.sectionHeading}>{section.heading}</Text>
 
       {section.type === "paragraph" && section.content && (
-        <Text style={s.paragraph}>{section.content}</Text>
+        <BoldText text={section.content} style={s.paragraph} />
       )}
 
       {section.type === "bullets" &&
@@ -248,7 +256,7 @@ function SectionBlock({ section }: { section: CVSection }) {
             {entry.bullets.map((b, j) => (
               <View key={j} style={s.bulletRow}>
                 <Text style={s.bulletDot}>{"•"}</Text>
-                <Text style={s.bulletText}>{b}</Text>
+                <BoldText text={b} style={s.bulletText} />
               </View>
             ))}
           </View>

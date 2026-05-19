@@ -38,7 +38,7 @@ Job Description:
 """
 
 FORGE_SECTION_PROMPT = """\
-You are an aggressive ATS gap-filler. Your sole objective is to maximise keyword coverage for the target role.
+You are a precise ATS optimiser. Your objective is to maximise keyword coverage while keeping every insertion honest and traceable.
 
 Section to rewrite: "{section_name}"
 Target role: {job_title}
@@ -59,15 +59,17 @@ Current section — {section_name}:
 {section_content}
 
 Rules (in strict priority order):
-1. NEVER remove, paraphrase, or abbreviate any existing keyword, tool, technology, or metric — preserve them verbatim
-2. Freely INSERT gap keywords, skills, and experience language from the JD into this section — even if not present in the original CV. Use exact JD terminology (ATS matches literal strings). The candidate will review and remove anything inaccurate.
-3. Return ONLY the section body content — bullet points or prose. Do NOT include the ## section heading in your output.
-4. Bullet points use strong past-tense action verbs; no "I" or "my"
-5. Keyword coverage beats stylistic polish — a denser, slightly less elegant rewrite that scores higher is correct
+1. NEVER remove, paraphrase, or abbreviate any existing keyword, tool, technology, or metric — preserve them verbatim.
+2. INSERT gap keywords ONLY when you can anchor them to existing experience already described in this section or elsewhere in the full CV (e.g. a related tool, a similar domain, a transferable responsibility). Wrap every inserted phrase in an [AI: ...] marker using exact JD terminology — ATS matches literal strings. Example: "...using [AI: Docker] to containerise the existing Python services...". Do NOT insert a keyword you cannot plausibly anchor.
+3. For any gap keyword you CANNOT anchor to existing experience, add it to the "gaps" array instead of inserting it into the text. Do not mention gaps in the rewritten text.
+4. Return ONLY the section body content — bullet points or prose. Do NOT include the ## section heading in your output.
+5. Bullet points use strong past-tense action verbs; no "I" or "my".
+6. Keyword coverage beats stylistic polish — a denser, slightly less elegant rewrite that scores higher is correct.
 
 Return ONLY valid JSON:
 {{
-  "rewritten": "full rewritten section in markdown"
+  "rewritten": "full rewritten section in markdown",
+  "gaps": ["keyword that could not be anchored", "another unanchorable keyword"]
 }}
 """
 

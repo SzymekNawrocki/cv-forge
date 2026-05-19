@@ -87,6 +87,9 @@ async def lifespan(app: FastAPI):
         await conn.execute(text(
             "ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS preferred_model VARCHAR(100)"
         ))
+        await conn.execute(text(
+            "ALTER TABLE tailored_cvs ADD COLUMN IF NOT EXISTS gaps_json TEXT"
+        ))
     logger.info("API Ready - Database Connected")
     yield
 

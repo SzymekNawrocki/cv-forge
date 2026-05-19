@@ -238,6 +238,7 @@ async def run_forge(
             sections[skills_key or "Skills"] = build_skills_markdown(db_skills)
 
     forged: dict[str, str] = {}
+    all_gaps: list[str] = []
     for sec_title, content in sections.items():
         if sec_title.lower() in FORGEABLE:
             forge_result = await ollama.forge_section(
@@ -251,8 +252,17 @@ async def run_forge(
                 existing_keywords=existing_keywords,
             )
             forged[sec_title] = forge_result.rewritten or content
+            all_gaps.extend(forge_result.gaps)
         else:
             forged[sec_title] = content
+
+    # Deduplicate gaps while preserving order
+    seen: set[str] = set()
+    unique_gaps: list[str] = []
+    for g in all_gaps:
+        if g.lower() not in seen:
+            seen.add(g.lower())
+            unique_gaps.append(g)
 
     tailored_md = merge_sections(forged)
     after_result = await ollama.calculate_match_score(
@@ -286,6 +296,7 @@ async def run_forge(
         content_json=content_json,
         initial_match_score=initial_score,
         match_score=match_score,
+        gaps_json=json.dumps(unique_gaps),
     )
     session.add(tailored)
     await session.commit()

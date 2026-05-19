@@ -13,6 +13,7 @@ class JDAnalysis(BaseModel):
 
 class ForgeResult(BaseModel):
     rewritten: str = ""
+    gaps: list[str] = []
 
 
 class MatchScore(BaseModel):

@@ -84,7 +84,8 @@ async def forge(
     user: User = Depends(current_active_verified_user),
 ):
     try:
-        return await run_forge(body.master_cv_id, body.job_description_text, session, user_id=user.id)
+        result = await run_forge(body.master_cv_id, body.job_description_text, session, user_id=user.id)
+        return TailoredCVRead.from_orm_with_gaps(result)
     except CVNotFoundError as e:
         raise HTTPException(404, str(e))
 
