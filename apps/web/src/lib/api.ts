@@ -90,11 +90,12 @@ export interface CurrentUser {
   is_active: boolean;
 }
 
-export async function getCurrentUser(): Promise<CurrentUser> {
+export async function getCurrentUser(): Promise<CurrentUser | null> {
   const res = await fetch(`${API_BASE}/users/me`, {
     credentials: "include",
     cache: "no-store",
   });
+  if (res.status === 401) return null;
   if (!res.ok) throw new APIError(res.status, res.statusText);
   return res.json();
 }

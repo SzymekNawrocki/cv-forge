@@ -6,7 +6,10 @@ import { getCurrentUser, logout, type CurrentUser } from "@/lib/api";
 
 export default function UserMenu() {
   const router = useRouter();
-  const { data: user } = useSWR<CurrentUser>("currentUser", getCurrentUser);
+  const { data: user } = useSWR<CurrentUser | null>("currentUser", getCurrentUser, {
+    shouldRetryOnError: false,
+    revalidateOnFocus: false,
+  });
 
   async function handleLogout() {
     await logout();
