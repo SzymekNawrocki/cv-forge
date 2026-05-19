@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { login, startGoogleOAuth, APIError } from "@/lib/api";
 
 export default function LoginPage() {
@@ -54,18 +55,11 @@ export default function LoginPage() {
         background: "#111113",
         border: "1px solid #1E1E20",
         borderRadius: "12px",
+        textAlign: "center",
       }}>
-        <h1 style={{
-          fontFamily: "var(--font-barlow-condensed), sans-serif",
-          fontSize: "28px",
-          fontWeight: 800,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          color: "#E2E2E4",
-          marginBottom: "8px",
-        }}>
-          CV<span style={{ color: "#FF5722" }}>—</span>FORGE
-        </h1>
+        <div style={{ display: "flex", justifyContent: "center", margin: "-40px 0 -60px" }}>
+          <Image src="/cv-forge-logo.png" alt="CV Forge" height={52} width={200} style={{ objectFit: "contain", display: "block" }} priority />
+        </div>
         <p style={{ color: "#888", fontSize: "14px", marginBottom: "32px" }}>Sign in to your account</p>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

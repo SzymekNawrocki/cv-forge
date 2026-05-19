@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import UserMenu from "./UserMenu";
 
 const AUTH_PATHS = ["/login", "/register", "/verify-email"];
@@ -24,17 +25,15 @@ export default function Navbar() {
       justifyContent: "space-between",
       padding: "0 28px",
     }}>
-      <a href="/" style={{ textDecoration: "none" }}>
-        <span style={{
-          fontFamily: '"Barlow Condensed", var(--font-barlow-condensed), sans-serif',
-          fontSize: "19px",
-          fontWeight: 800,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          color: "#E2E2E4",
-        }}>
-          CV<span style={{ color: "#FF5722" }}>—</span>FORGE
-        </span>
+      <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+        <Image
+          src="/cv-forge-logo.png"
+          alt="CV Forge"
+          height={32}
+          width={120}
+          style={{ objectFit: "contain" }}
+          priority
+        />
       </a>
 
       <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
