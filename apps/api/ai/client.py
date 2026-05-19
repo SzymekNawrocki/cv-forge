@@ -27,9 +27,7 @@ from ai.schemas import (
 _GROQ_BASE = "https://api.groq.com/openai/v1"
 GROQ_MODELS = [
     "llama-3.3-70b-versatile",
-    "qwen/qwen3-32b",
     "meta-llama/llama-4-scout-17b-16e-instruct",
-    "llama-3.1-8b-instant",
 ]
 
 # OpenRouter — fallback when Groq is rate-limited

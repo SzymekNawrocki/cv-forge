@@ -155,13 +155,16 @@ All API calls go through `src/lib/api.ts`. Client Components only at leaf level.
 Turbo config: `--concurrency=3` (2 persistent tasks require ≥3), `init-db` task is non-persistent/no-cache, `dev` task `dependsOn: ["init-db"]`.
 
 ## Development Rules
-- **AI Provider**: All AI calls go through `OpenRouterClient._generate_json()` (aliased as `OllamaClient`). Uses `openai` SDK pointed at `https://openrouter.ai/api/v1` with `OPENROUTER_API_KEY`. On 429/rate-limit errors, cascades through 5 free models in order:
-  1. `google/gemini-2.5-pro-exp-03-25:free` — default primary
-  2. `meta-llama/llama-4-maverick:free`
-  3. `deepseek/deepseek-chat-v3-0324:free`
-  4. `meta-llama/llama-4-scout:free`
-  5. `deepseek/deepseek-r1:free`
-  User's `preferred_model` (from `UserProfile`) overrides the primary; cascade skips it and tries remaining 4.
+- **AI Provider**: All AI calls go through `OpenRouterClient._generate_json()` (aliased as `OllamaClient`). Tries Groq first (fast LPU), falls back to OpenRouter free models. Cascade order:
+  **Groq** (primary, `GROQ_API_KEY`):
+  1. `llama-3.3-70b-versatile` — default primary
+  2. `meta-llama/llama-4-scout-17b-16e-instruct`
+  **OpenRouter** (fallback, `OPENROUTER_API_KEY`):
+  3. `google/gemma-4-26b-a4b-it:free`
+  4. `google/gemma-4-31b-it:free`
+  5. `qwen/qwen3-next-80b-a3b-instruct:free`
+  6. `nvidia/nemotron-3-super-120b-a12b:free`
+  User's `preferred_model` overrides the primary; cascade skips it and continues with remaining models. Models that 413 (payload too large) on real CV content are excluded from the list.
 - **OpenRouter SDK**: `openai>=1.30.0` — `AsyncOpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")`. Always pass `extra_headers={"HTTP-Referer": "https://cv-forge.app", "X-Title": "CV Forge"}` — required by OpenRouter for free models.
 - **JSON Only**: All calls use `response_format={"type": "json_object"}` + system prompt enforcing JSON-only response. Parse with `_parse_json()` in `ai/client.py`.
 - **AI Response Schemas**: Every `OpenRouterClient` method returns a typed Pydantic object from `ai/schemas.py` — never a raw dict. Add new AI calls by: (1) defining a schema in `ai/schemas.py`, (2) calling `Schema.model_validate(raw)` inside the client method. `MatchScore.clamp_score` validator enforces 0–100 range.
