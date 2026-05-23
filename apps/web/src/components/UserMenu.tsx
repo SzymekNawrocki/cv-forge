@@ -9,6 +9,15 @@ export default function UserMenu() {
   const { data: user } = useSWR<CurrentUser | null>("currentUser", getCurrentUser, {
     shouldRetryOnError: false,
     revalidateOnFocus: false,
+    onSuccess: (data) => {
+      if (typeof document === "undefined") return;
+      if (data) {
+        const secure = window.location.protocol === "https:";
+        document.cookie = `session=1; path=/; SameSite=Strict${secure ? "; Secure" : ""}; Max-Age=604800`;
+      } else {
+        document.cookie = "session=; path=/; Max-Age=0";
+      }
+    },
   });
 
   async function handleLogout() {

@@ -9,7 +9,7 @@ export function proxy(request: NextRequest) {
   const isPublic =
     PUBLIC_EXACT.includes(pathname) ||
     PUBLIC_PREFIX.some((p) => pathname.startsWith(p));
-  const authCookie = request.cookies.get("auth");
+  const authCookie = request.cookies.get("session");
 
   if (!isPublic && !authCookie) {
     return NextResponse.redirect(new URL("/login", request.url));

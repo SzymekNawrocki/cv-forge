@@ -2,7 +2,7 @@ const _rawApiUrl = process.env.NEXT_PUBLIC_API_URL;
 if (!_rawApiUrl && process.env.NODE_ENV === "production") {
   throw new Error("NEXT_PUBLIC_API_URL is not set. Add it to Vercel environment variables.");
 }
-const API_BASE = _rawApiUrl ?? "http://localhost:8000";
+const API_BASE = (_rawApiUrl ?? "http://localhost:8000").replace(/\/$/, "");
 
 export class APIError extends Error {
   constructor(
@@ -52,6 +52,8 @@ export async function login(email: string, password: string): Promise<void> {
     const text = await res.text().catch(() => "");
     throw new APIError(res.status, text || res.statusText);
   }
+  const secure = typeof window !== "undefined" && window.location.protocol === "https:";
+  document.cookie = `session=1; path=/; SameSite=Strict${secure ? "; Secure" : ""}; Max-Age=604800`;
 }
 
 export async function register(email: string, password: string): Promise<void> {
@@ -72,6 +74,7 @@ export async function logout(): Promise<void> {
     method: "POST",
     credentials: "include",
   });
+  document.cookie = "session=; path=/; Max-Age=0";
 }
 
 export async function verifyEmail(token: string): Promise<void> {
