@@ -1,4 +1,8 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const _rawApiUrl = process.env.NEXT_PUBLIC_API_URL;
+if (!_rawApiUrl && process.env.NODE_ENV === "production") {
+  throw new Error("NEXT_PUBLIC_API_URL is not set. Add it to Vercel environment variables.");
+}
+const API_BASE = _rawApiUrl ?? "http://localhost:8000";
 
 export class APIError extends Error {
   constructor(

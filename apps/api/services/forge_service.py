@@ -6,9 +6,8 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import MasterCV, JobDescription, TailoredCV
-from domain.cv_logic.parser import FORGEABLE, split_sections, merge_sections
-from domain.cv_logic.cv_json_builder import build_cv_json
 from domain.schemas import CVFormData
+from domain.cv_logic.forge_pipeline import forge_cv
 from ai.client import OllamaClient
 from services.skills_service import build_skills_markdown, list_skills
 from services.profile_service import get_or_create_profile
@@ -183,15 +182,15 @@ async def run_forge(
 ) -> TailoredCV:
     # Phase 1: short DB transaction — load all needed data, commit JD early.
     # This releases the connection before AI calls so Neon idle timeout can't kill it.
-    from ai.client import FREE_MODELS
     profile = await get_or_create_profile(session, user_id)
     preferred = profile.preferred_model
-    if preferred and preferred not in FREE_MODELS:
+    ollama = OllamaClient(preferred_model=preferred)
+    if preferred and not ollama.is_known_model(preferred):
         logger.warning("preferred_model %s is stale, resetting to default", preferred)
         profile.preferred_model = None
         await session.commit()
         preferred = None
-    ollama = OllamaClient(preferred_model=preferred)
+        ollama = OllamaClient(preferred_model=None)
 
     cv = await session.get(MasterCV, master_cv_id)
     if cv is None or cv.user_id != user_id:
@@ -203,6 +202,7 @@ async def run_forge(
     cv_portfolio_url = cv.portfolio_url
 
     db_skills = await list_skills(session, user_id=user_id)
+    skills_md = build_skills_markdown(db_skills) if db_skills else None
 
     jd = JobDescription(raw_text=jd_text, user_id=user_id)
     session.add(jd)
@@ -210,93 +210,27 @@ async def run_forge(
     jd_id = jd.id
 
     # Phase 2: all AI calls — no DB connection held
-    analysis = await ollama.analyze_jd(jd_text)
-    required_kw: list[str] = analysis.required_skills
-    nice_kw: list[str] = analysis.nice_to_have
-    keywords: list[str] = analysis.keywords + required_kw
-    job_title: str = analysis.job_title
-
-    before_result = await ollama.calculate_match_score(
-        cv_markdown, jd_text,
-        required_keywords=required_kw,
-        nice_to_have_keywords=nice_kw,
-    )
-    initial_score = before_result.score
-
-    missing_critical: list[str] = before_result.missing_critical
-    missing_nice_to_have: list[str] = before_result.missing_nice_to_have
-    missing_set = set(missing_critical + missing_nice_to_have)
-    existing_keywords = [k for k in keywords if k not in missing_set]
-
-    sections = split_sections(cv_markdown)
-
-    # Only inject full DB skills when CV has no existing skills content (Option B).
-    if db_skills:
-        skills_key = next((k for k in sections if k.lower() == "skills"), None)
-        has_skills = bool(skills_key and sections.get(skills_key, "").strip())
-        if not has_skills:
-            sections[skills_key or "Skills"] = build_skills_markdown(db_skills)
-
-    forged: dict[str, str] = {}
-    all_gaps: list[str] = []
-    for sec_title, content in sections.items():
-        if sec_title.lower() in FORGEABLE:
-            forge_result = await ollama.forge_section(
-                section_name=sec_title,
-                section_content=content,
-                keywords=keywords,
-                job_title=job_title,
-                full_cv=cv_markdown,
-                missing_critical=missing_critical,
-                missing_nice_to_have=missing_nice_to_have,
-                existing_keywords=existing_keywords,
-            )
-            forged[sec_title] = forge_result.rewritten or content
-            all_gaps.extend(forge_result.gaps)
-        else:
-            forged[sec_title] = content
-
-    # Deduplicate gaps while preserving order
-    seen: set[str] = set()
-    unique_gaps: list[str] = []
-    for g in all_gaps:
-        if g.lower() not in seen:
-            seen.add(g.lower())
-            unique_gaps.append(g)
-
-    tailored_md = merge_sections(forged)
-    after_result = await ollama.calculate_match_score(
-        tailored_md, jd_text,
-        required_keywords=required_kw,
-        nice_to_have_keywords=nice_kw,
-    )
-    match_score = after_result.score
-
-    if match_score < initial_score:
-        logger.warning(
-            "Score regression: before=%.1f after=%.1f (master_cv_id=%d)",
-            initial_score, match_score, master_cv_id,
-        )
-
-    cv_json_result = await build_cv_json(
-        tailored_md, ollama,
+    output = await forge_cv(
+        cv_markdown=cv_markdown,
+        skills_markdown=skills_md,
+        jd_text=jd_text,
+        provider=ollama,
         github_url=cv_github_url,
         portfolio_url=cv_portfolio_url,
     )
-    content_json = json.dumps(cv_json_result)
 
     # Phase 3: short DB transaction — save results with a fresh connection
     jd_obj = await session.get(JobDescription, jd_id)
     if jd_obj:
-        jd_obj.extracted_keywords = ", ".join(keywords)
+        jd_obj.extracted_keywords = ", ".join(output.keywords)
 
     tailored = TailoredCV(
         master_cv_id=master_cv_id,
         job_desc_id=jd_id,
-        content_json=content_json,
-        initial_match_score=initial_score,
-        match_score=match_score,
-        gaps_json=json.dumps(unique_gaps),
+        content_json=json.dumps(output.content_json),
+        initial_match_score=output.initial_score,
+        match_score=output.match_score,
+        gaps_json=json.dumps(output.gaps),
     )
     session.add(tailored)
     await session.commit()

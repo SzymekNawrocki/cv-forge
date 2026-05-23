@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getProfile, updateProfile, type UserProfile } from "@/lib/api";
+import { useState } from "react";
+import useSWR from "swr";
+import { getProfile, updateProfile } from "@/lib/api";
+import { F } from "@/lib/theme";
 
 const FREE_MODELS: { id: string; label: string }[] = [
   { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B — Groq (recommended)" },
@@ -14,32 +16,25 @@ const FREE_MODELS: { id: string; label: string }[] = [
 const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 
 export default function SettingsPage() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
+  const { data: profile, mutate, error: loadError } = useSWR("profile", getProfile);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  useEffect(() => {
-    getProfile()
-      .then((p) => {
-        setProfile(p);
-        setSelectedModel(p.preferred_model ?? DEFAULT_MODEL);
-      })
-      .catch(() => setError("Failed to load settings."));
-  }, []);
+  const activeModel = selectedModel ?? profile?.preferred_model ?? DEFAULT_MODEL;
 
   async function handleSave() {
     setSaving(true);
     setSaved(false);
-    setError(null);
+    setSaveError(null);
     try {
-      const updated = await updateProfile({ preferred_model: selectedModel });
-      setProfile(updated);
+      const updated = await updateProfile({ preferred_model: activeModel });
+      await mutate(updated, false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
-      setError("Failed to save. Please try again.");
+      setSaveError("Failed to save. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -50,12 +45,12 @@ export default function SettingsPage() {
       minHeight: "100vh",
       background: "#0D0D0E",
       color: "#E2E2E4",
-      fontFamily: '"IBM Plex Sans", sans-serif',
+      fontFamily: F.body,
       padding: "48px 28px",
     }}>
       <div style={{ maxWidth: 560, margin: "0 auto" }}>
         <h1 style={{
-          fontFamily: '"Barlow Condensed", sans-serif',
+          fontFamily: F.display,
           fontWeight: 800,
           fontSize: 32,
           letterSpacing: "0.06em",
@@ -77,7 +72,7 @@ export default function SettingsPage() {
           marginBottom: 24,
         }}>
           <h2 style={{
-            fontFamily: '"Barlow Condensed", sans-serif',
+            fontFamily: F.display,
             fontWeight: 700,
             fontSize: 14,
             letterSpacing: "0.1em",
@@ -92,18 +87,18 @@ export default function SettingsPage() {
             automatically falls back through the remaining free models.
           </p>
 
-          {profile === null && !error && (
+          {!profile && !loadError && (
             <p style={{ color: "#666", fontSize: 13 }}>Loading…</p>
           )}
 
-          {error && (
-            <p style={{ color: "#ff5722", fontSize: 13 }}>{error}</p>
+          {loadError && (
+            <p style={{ color: "#ff5722", fontSize: 13 }}>Failed to load settings.</p>
           )}
 
-          {profile !== null && (
+          {profile && (
             <>
               <select
-                value={selectedModel}
+                value={activeModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
                 style={{
                   width: "100%",
@@ -146,6 +141,9 @@ export default function SettingsPage() {
                 </button>
                 {saved && (
                   <span style={{ color: "#4caf50", fontSize: 13 }}>Saved</span>
+                )}
+                {saveError && (
+                  <span style={{ color: "#ff5722", fontSize: 13 }}>{saveError}</span>
                 )}
               </div>
             </>

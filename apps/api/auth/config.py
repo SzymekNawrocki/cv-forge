@@ -8,12 +8,15 @@ from httpx_oauth.clients.google import GoogleOAuth2
 from db.models import User
 from auth.manager import get_user_manager
 
+_cookie_secure = os.environ.get("COOKIE_SECURE", "false").lower() in ("1", "true", "yes")
+_cookie_samesite = os.environ.get("COOKIE_SAMESITE", "lax")
+
 cookie_transport = CookieTransport(
     cookie_name="auth",
     cookie_max_age=604800,
     cookie_httponly=True,
-    cookie_secure=False,
-    cookie_samesite="lax",
+    cookie_secure=_cookie_secure,
+    cookie_samesite=_cookie_samesite,
 )
 
 
