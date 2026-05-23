@@ -4,7 +4,8 @@ from ai.prompts import (
     ANALYZE_JD_PROMPT,
     CLEAN_CV_PROMPT,
     FORMAT_CV_JSON_PROMPT,
-    FORGE_SECTION_PROMPT,
+    FORGE_PROMPTS,
+    ForgeStrategy,
     MATCH_SCORE_PROMPT,
     PARSE_ENTRIES_PROMPT,
 )
@@ -45,9 +46,11 @@ class OpenRouterClient:
         missing_critical: list[str] | None = None,
         missing_nice_to_have: list[str] | None = None,
         existing_keywords: list[str] | None = None,
+        strategy: ForgeStrategy = ForgeStrategy.ANCHORED,
     ) -> ForgeResult:
+        prompt_template = FORGE_PROMPTS[strategy]
         raw = await self._generate_json(
-            FORGE_SECTION_PROMPT.format(
+            prompt_template.format(
                 section_name=section_name,
                 section_content=section_content,
                 keywords=", ".join(keywords),

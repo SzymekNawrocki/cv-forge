@@ -1,4 +1,5 @@
 import { Document, Font, Link, Page, Text, View, StyleSheet, type Styles } from "@react-pdf/renderer";
+import { splitMarkers } from "@/lib/aiMarker";
 
 // Roboto supports full Latin Extended (Polish ą ć ę ł ń ó ś ź ż)
 // Module is browser-only (dynamically imported with ssr:false)
@@ -196,10 +197,11 @@ const UNDERLINE_BOLD_SECTIONS = new Set(["PROJECTS", "CERTIFICATIONS"]);
 
 function BoldText({ text, style, underlineBold = false }: { text: string; style: Styles[string]; underlineBold?: boolean }) {
   const cleaned = text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-  const parts = cleaned.split(/(\*\*[^*]+\*\*|\[AI:[^\]]+\])/g);
+  // Split on bold markers first, then split each non-bold chunk on AI markers
+  const boldParts = cleaned.split(/(\*\*[^*]+\*\*)/g);
   return (
     <Text style={style}>
-      {parts.map((part, i) => {
+      {boldParts.flatMap((part, i) => {
         if (part.startsWith("**") && part.endsWith("**")) {
           return (
             <Text key={i} style={{ fontFamily: "Roboto", fontWeight: 700, ...(underlineBold ? { textDecoration: "underline" } : {}) }}>
@@ -207,14 +209,13 @@ function BoldText({ text, style, underlineBold = false }: { text: string; style:
             </Text>
           );
         }
-        if (/^\[AI:/i.test(part) && part.endsWith("]")) {
-          return (
-            <Text key={i} style={{ color: "#B45309", fontWeight: 700 }}>
-              {part.replace(/^\[AI:\s*/i, "").replace(/\]$/, "")}
-            </Text>
-          );
-        }
-        return <Text key={i}>{part}</Text>;
+        return splitMarkers(part).map(({ text: t, ai }, j) =>
+          ai ? (
+            <Text key={`${i}-${j}`} style={{ color: "#B45309", fontWeight: 700 }}>{t}</Text>
+          ) : (
+            <Text key={`${i}-${j}`}>{t}</Text>
+          )
+        );
       })}
     </Text>
   );

@@ -55,28 +55,9 @@ class TailoredCVRead(BaseModel):
     content_json: str
     initial_match_score: float | None = None
     match_score: float | None = None
-    gaps: list[str] = []
+    failed_sections: list[str] = []
 
     model_config = {"from_attributes": True}
-
-    @classmethod
-    def from_orm_with_gaps(cls, obj) -> "TailoredCVRead":
-        import json as _json
-        gaps: list[str] = []
-        if obj.gaps_json:
-            try:
-                gaps = _json.loads(obj.gaps_json)
-            except Exception:
-                pass
-        return cls(
-            id=obj.id,
-            master_cv_id=obj.master_cv_id,
-            job_desc_id=obj.job_desc_id,
-            content_json=obj.content_json,
-            initial_match_score=obj.initial_match_score,
-            match_score=obj.match_score,
-            gaps=gaps,
-        )
 
 
 class UserProfileUpdate(BaseModel):

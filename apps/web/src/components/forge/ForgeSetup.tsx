@@ -22,13 +22,17 @@ interface Props {
   onSelectId: (id: number) => void;
   jdText: string;
   onJdChange: (text: string) => void;
+  aggressive: boolean;
+  onAggressiveToggle: (v: boolean) => void;
   error: string | null;
   isPending: boolean;
   onForge: () => void;
 }
 
 export default function ForgeSetup({
-  cvs, selectedId, onSelectId, jdText, onJdChange, error, isPending, onForge,
+  cvs, selectedId, onSelectId, jdText, onJdChange,
+  aggressive, onAggressiveToggle,
+  error, isPending, onForge,
 }: Props) {
   const disabled = isPending || !selectedId || !jdText.trim();
 
@@ -58,11 +62,11 @@ export default function ForgeSetup({
             FORGE<span style={{ color: "#FF5722" }}> /</span>
           </h1>
           <p style={{ fontFamily: F.body, fontSize: "12px", color: "#7A7A84", margin: "5px 0 0 0" }}>
-            Paste a job description — the AI rewrites your CV sections with anchored keyword insertions
+            Paste a job description — the AI rewrites your CV sections with keyword insertions
           </p>
         </div>
 
-        {/* CV selector + Forge */}
+        {/* CV selector + Aggressive toggle + Forge */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div style={{ position: "relative" }}>
             <select
@@ -77,12 +81,45 @@ export default function ForgeSetup({
             </select>
             <span style={{ position: "absolute", right: "11px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#7A7A84", fontSize: "11px" }}>▾</span>
           </div>
+
+          {/* Aggressive toggle */}
+          <label style={{ display: "flex", alignItems: "center", gap: "7px", cursor: "pointer", userSelect: "none" as const }}>
+            <div
+              onClick={() => onAggressiveToggle(!aggressive)}
+              style={{
+                width: "34px", height: "18px", borderRadius: "9px",
+                background: aggressive ? "#FF5722" : "#272729",
+                border: `1px solid ${aggressive ? "#FF5722" : "#3A3A3E"}`,
+                position: "relative", cursor: "pointer",
+                transition: "background 0.18s, border-color 0.18s",
+              }}
+            >
+              <div style={{
+                position: "absolute", top: "2px",
+                left: aggressive ? "16px" : "2px",
+                width: "12px", height: "12px", borderRadius: "50%",
+                background: "#E2E2E4",
+                transition: "left 0.18s",
+              }} />
+            </div>
+            <span style={{ fontFamily: F.body, fontSize: "11px", color: aggressive ? "#FF8C42" : "#5C5C66", fontWeight: aggressive ? 700 : 400 }}>
+              Aggressive
+            </span>
+          </label>
+
           <button onClick={onForge} disabled={disabled} style={forgeBtn}>
             {isPending && <ForgeSpinner size={15} />}
             <span style={{ position: "relative" }}>{isPending ? "Forging..." : "⚡ Forge"}</span>
           </button>
         </div>
       </div>
+
+      {/* Aggressive caption */}
+      {aggressive && (
+        <div style={{ padding: "8px 14px", background: "rgba(255,87,34,0.06)", border: "1px solid rgba(255,87,34,0.18)", borderRadius: "6px", fontFamily: F.body, fontSize: "11px", color: "#FF8C42" }}>
+          Insert every JD keyword even without matching experience — review &amp; delete inaccurate claims after
+        </div>
+      )}
 
       {/* Error */}
       {error && (

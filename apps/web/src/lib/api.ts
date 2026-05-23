@@ -131,7 +131,7 @@ export interface TailoredCV {
   content_json: string;
   initial_match_score: number | null;
   match_score: number | null;
-  gaps: string[];
+  failed_sections: string[];
 }
 
 export interface UserProfile {
@@ -249,11 +249,16 @@ export async function deleteCV(id: number): Promise<void> {
 export async function forgeCV(
   master_cv_id: number,
   job_description_text: string,
+  aggressive = false,
 ): Promise<TailoredCV> {
   const res = await apiFetch(`${API_BASE}/cv/forge`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ master_cv_id, job_description_text }),
+    body: JSON.stringify({
+      master_cv_id,
+      job_description_text,
+      strategy: aggressive ? "aggressive" : "anchored",
+    }),
   });
   return res.json();
 }

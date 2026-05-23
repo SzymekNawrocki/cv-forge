@@ -3,12 +3,13 @@
 import { useState, useEffect, useMemo, useTransition } from "react";
 import useSWR from "swr";
 import { fetchMasterCVs, forgeCV, type MasterCV, type TailoredCV } from "@/lib/api";
+import { stripMarkers } from "@/lib/aiMarker";
 import type { CVData } from "@/components/CVDocument";
 import ForgeSetup from "@/components/forge/ForgeSetup";
 import ForgeReview from "@/components/forge/ForgeReview";
 
 function stripAIMarkers(data: CVData): CVData {
-  const strip = (s: string) => s.replace(/\[AI:\s*([^\]]+)\]/gi, "$1");
+  const strip = (s: string) => stripMarkers(s);
   return {
     ...data,
     sections: data.sections.map((section) => ({
@@ -32,12 +33,12 @@ export default function ForgePage() {
   const { data: cvs = [] } = useSWR<MasterCV[]>("masterCVs", fetchMasterCVs);
   const [selectedId, setSelectedId] = useState<number | "">("");
   const [jdText, setJdText] = useState("");
+  const [aggressive, setAggressive] = useState(false);
   const [result, setResult] = useState<TailoredCV | null>(null);
   const [editedData, setEditedData] = useState<CVData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [rightTab, setRightTab] = useState<"preview" | "edit">("preview");
-  const [dismissedGaps, setDismissedGaps] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (cvs.length > 0 && selectedId === "") setSelectedId(cvs[0].id);
@@ -48,10 +49,9 @@ export default function ForgePage() {
     setError(null);
     setResult(null);
     setEditedData(null);
-    setDismissedGaps(new Set());
     startTransition(async () => {
       try {
-        const tailored = await forgeCV(Number(selectedId), jdText.trim());
+        const tailored = await forgeCV(Number(selectedId), jdText.trim(), aggressive);
         setResult(tailored);
         setRightTab("preview");
         const parsed = parseCVData(tailored);
@@ -74,10 +74,6 @@ export default function ForgePage() {
 
   const hasResult = Boolean(cvData && result && !isPending);
 
-  function dismissGap(gap: string) {
-    setDismissedGaps(prev => new Set([...prev, gap]));
-  }
-
   if (!hasResult) {
     return (
       <ForgeSetup
@@ -86,6 +82,8 @@ export default function ForgePage() {
         onSelectId={setSelectedId}
         jdText={jdText}
         onJdChange={setJdText}
+        aggressive={aggressive}
+        onAggressiveToggle={setAggressive}
         error={error}
         isPending={isPending}
         onForge={handleForge}
@@ -102,12 +100,12 @@ export default function ForgePage() {
       cvs={cvs}
       selectedId={selectedId}
       onSelectId={setSelectedId}
+      aggressive={aggressive}
+      onAggressiveToggle={setAggressive}
       error={error}
       isPending={isPending}
       rightTab={rightTab}
       onTabChange={setRightTab}
-      dismissedGaps={dismissedGaps}
-      onDismissGap={dismissGap}
       onEditedData={setEditedData}
       onForge={handleForge}
     />

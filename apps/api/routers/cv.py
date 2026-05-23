@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.client import OllamaClient
+from ai.prompts import ForgeStrategy
 from auth.config import current_active_verified_user
 from db.base import get_session
 from db.models import MasterCV, User
@@ -30,6 +31,7 @@ class ImportRequest(BaseModel):
 class ForgeRequest(BaseModel):
     master_cv_id: int
     job_description_text: str = Field(min_length=1, max_length=20_000)
+    strategy: ForgeStrategy = ForgeStrategy.ANCHORED
 
 
 class CVLinksRequest(BaseModel):
@@ -84,8 +86,19 @@ async def forge(
     user: User = Depends(current_active_verified_user),
 ):
     try:
-        result = await run_forge(body.master_cv_id, body.job_description_text, session, user_id=user.id)
-        return TailoredCVRead.from_orm_with_gaps(result)
+        tailored, failed_sections = await run_forge(
+            body.master_cv_id, body.job_description_text, session,
+            user_id=user.id, strategy=body.strategy,
+        )
+        return TailoredCVRead(
+            id=tailored.id,
+            master_cv_id=tailored.master_cv_id,
+            job_desc_id=tailored.job_desc_id,
+            content_json=tailored.content_json,
+            initial_match_score=tailored.initial_match_score,
+            match_score=tailored.match_score,
+            failed_sections=failed_sections,
+        )
     except CVNotFoundError as e:
         raise HTTPException(404, str(e))
 

@@ -148,49 +148,6 @@ function CVEditor({ data, onChange }: { data: CVData; onChange: (d: CVData) => v
   );
 }
 
-// ── Gap Panel ─────────────────────────────────────────────────────────────────
-
-function GapPanel({ gaps, dismissed, onDismiss }: { gaps: string[]; dismissed: Set<string>; onDismiss: (gap: string) => void }) {
-  const visible = gaps.filter(g => !dismissed.has(g));
-  const hiddenCount = gaps.length - visible.length;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "10px", height: "100%" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-        <span style={{ fontFamily: F.display, fontSize: "10px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase" as const, color: "#5C5C66" }}>Unmet Gaps</span>
-        {visible.length > 0 && <span style={{ fontFamily: F.body, fontSize: "10px", color: "#7A7A84" }}>{visible.length}</span>}
-      </div>
-      {gaps.length === 0 ? (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-          <span style={{ fontSize: "20px" }}>✓</span>
-          <span style={{ fontFamily: F.body, fontSize: "11px", color: "#4ADE80", textAlign: "center" }}>All JD keywords anchored</span>
-        </div>
-      ) : visible.length === 0 ? (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-          <span style={{ fontFamily: F.body, fontSize: "11px", color: "#4ADE80", textAlign: "center" }}>All gaps reviewed</span>
-          {hiddenCount > 0 && <span style={{ fontFamily: F.body, fontSize: "10px", color: "#5C5C66" }}>({hiddenCount} dismissed)</span>}
-        </div>
-      ) : (
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px" }}>
-          <div style={{ fontFamily: F.body, fontSize: "10px", color: "#5C5C66", lineHeight: 1.5, marginBottom: "2px" }}>
-            Keywords the AI couldn&apos;t anchor to your experience. Add them manually or leave them out.
-          </div>
-          {visible.map((gap) => (
-            <div key={gap} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 10px", background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.16)", borderRadius: "6px", gap: "8px" }}>
-              <span style={{ fontFamily: F.body, fontSize: "11px", color: "#F87171", flex: 1, wordBreak: "break-word" as const }}>{gap}</span>
-              <button onClick={() => onDismiss(gap)} title="Dismiss"
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#5C5C66", fontSize: "14px", lineHeight: 1, padding: "0 2px", flexShrink: 0 }}>
-                ×
-              </button>
-            </div>
-          ))}
-          {hiddenCount > 0 && <div style={{ fontFamily: F.body, fontSize: "10px", color: "#3A3A3E", textAlign: "center", paddingTop: "4px" }}>{hiddenCount} dismissed</div>}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Review Phase ──────────────────────────────────────────────────────────────
 
 interface Props {
@@ -201,22 +158,23 @@ interface Props {
   cvs: MasterCV[];
   selectedId: number | "";
   onSelectId: (id: number) => void;
+  aggressive: boolean;
+  onAggressiveToggle: (v: boolean) => void;
   error: string | null;
   isPending: boolean;
   rightTab: "preview" | "edit";
   onTabChange: (tab: "preview" | "edit") => void;
-  dismissedGaps: Set<string>;
-  onDismissGap: (gap: string) => void;
   onEditedData: (data: CVData) => void;
   onForge: () => void;
 }
 
 export default function ForgeReview({
   result, cvData, cleanData, jdText, cvs, selectedId, onSelectId,
-  error, isPending, rightTab, onTabChange, dismissedGaps, onDismissGap,
+  aggressive, onAggressiveToggle,
+  error, isPending, rightTab, onTabChange,
   onEditedData, onForge,
 }: Props) {
-  const gaps = result.gaps ?? [];
+  const failedSections = result.failed_sections ?? [];
 
   const forgeBtn = {
     position: "relative" as const, display: "flex", alignItems: "center", gap: "8px",
@@ -246,14 +204,47 @@ export default function ForgeReview({
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "5px", padding: "5px 10px", background: "rgba(180,83,9,0.08)", border: "1px solid rgba(180,83,9,0.20)", borderRadius: "5px" }}>
             <span style={{ fontFamily: F.body, fontSize: "10px", color: "#B45309", fontWeight: 700 }}>AI</span>
-            <span style={{ fontFamily: F.body, fontSize: "10px", color: "#7A7A84" }}>= anchored insertion — review &amp; remove if inaccurate</span>
+            <span style={{ fontFamily: F.body, fontSize: "10px", color: "#7A7A84" }}>&nbsp;= AI insertion — review &amp; delete if inaccurate</span>
           </div>
+
+          {/* Aggressive toggle */}
+          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", userSelect: "none" as const }}>
+            <div
+              onClick={() => onAggressiveToggle(!aggressive)}
+              style={{
+                width: "28px", height: "15px", borderRadius: "8px",
+                background: aggressive ? "#FF5722" : "#272729",
+                border: `1px solid ${aggressive ? "#FF5722" : "#3A3A3E"}`,
+                position: "relative", cursor: "pointer",
+                transition: "background 0.18s, border-color 0.18s",
+              }}
+            >
+              <div style={{
+                position: "absolute", top: "1px",
+                left: aggressive ? "13px" : "1px",
+                width: "11px", height: "11px", borderRadius: "50%",
+                background: "#E2E2E4",
+                transition: "left 0.18s",
+              }} />
+            </div>
+            <span style={{ fontFamily: F.body, fontSize: "10px", color: aggressive ? "#FF8C42" : "#5C5C66", fontWeight: aggressive ? 700 : 400 }}>
+              Aggressive
+            </span>
+          </label>
+
           <button onClick={onForge} disabled={isPending} style={forgeBtn}>
             {isPending && <ForgeSpinner size={13} />}
             <span style={{ position: "relative" }}>{isPending ? "Forging..." : "⟳ Reforge"}</span>
           </button>
         </div>
       </div>
+
+      {/* Failed sections banner */}
+      {failedSections.length > 0 && (
+        <div style={{ padding: "8px 14px", background: "rgba(255,140,66,0.06)", border: "1px solid rgba(255,140,66,0.20)", borderRadius: "6px", fontFamily: F.body, fontSize: "11px", color: "#FF8C42" }}>
+          {failedSections.length} section{failedSections.length > 1 ? "s" : ""} couldn&apos;t be optimized — Reforge to retry.
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -262,8 +253,8 @@ export default function ForgeReview({
         </div>
       )}
 
-      {/* Three-column body */}
-      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "200px 1fr 220px", gap: "16px", minHeight: 0 }}>
+      {/* Two-column body */}
+      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "200px 1fr", gap: "16px", minHeight: 0 }}>
         {/* Left: JD + CV selector */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px", minHeight: 0 }}>
           <label style={{ fontFamily: F.display, fontSize: "10px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase" as const, color: "#5C5C66", flexShrink: 0 }}>Job Description</label>
@@ -306,11 +297,6 @@ export default function ForgeReview({
               <CVEditor data={cvData} onChange={onEditedData} />
             </div>
           )}
-        </div>
-
-        {/* Right: Gap Panel */}
-        <div style={{ display: "flex", flexDirection: "column", minHeight: 0, background: "#111113", border: "1px solid #1A1A1C", borderRadius: "7px", padding: "14px 12px" }}>
-          <GapPanel gaps={gaps} dismissed={dismissedGaps} onDismiss={onDismissGap} />
         </div>
       </div>
     </main>

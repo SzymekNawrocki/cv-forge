@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import MasterCV, JobDescription, TailoredCV
 from domain.schemas import CVFormData
+from ai.prompts import ForgeStrategy
 from domain.cv_logic.forge_pipeline import forge_cv
 from ai.client import OllamaClient
 from services.skills_service import build_skills_markdown, list_skills
@@ -179,7 +180,8 @@ async def run_forge(
     jd_text: str,
     session: AsyncSession,
     user_id: uuid.UUID,
-) -> TailoredCV:
+    strategy: ForgeStrategy = ForgeStrategy.ANCHORED,
+) -> tuple[TailoredCV, list[str]]:
     # Phase 1: short DB transaction — load all needed data, commit JD early.
     # This releases the connection before AI calls so Neon idle timeout can't kill it.
     profile = await get_or_create_profile(session, user_id)
@@ -217,6 +219,7 @@ async def run_forge(
         provider=ollama,
         github_url=cv_github_url,
         portfolio_url=cv_portfolio_url,
+        strategy=strategy,
     )
 
     # Phase 3: short DB transaction — save results with a fresh connection
@@ -230,9 +233,8 @@ async def run_forge(
         content_json=json.dumps(output.content_json),
         initial_match_score=output.initial_score,
         match_score=output.match_score,
-        gaps_json=json.dumps(output.gaps),
     )
     session.add(tailored)
     await session.commit()
     await session.refresh(tailored)
-    return tailored
+    return tailored, output.failed_sections

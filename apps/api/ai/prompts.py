@@ -37,19 +37,28 @@ Job Description:
 {jd_text}
 """
 
-FORGE_SECTION_PROMPT = """\
-You are a precise ATS optimiser. Your objective is to maximise keyword coverage while keeping every insertion honest and traceable.
+from enum import Enum
+
+
+class ForgeStrategy(str, Enum):
+    ANCHORED = "anchored"
+    AGGRESSIVE = "aggressive"
+
+
+FORGE_SECTION_PROMPT_ANCHORED = """\
+You are a precise ATS optimiser. Maximise keyword coverage while keeping every insertion honest
+and anchored to real experience.
 
 Section to rewrite: "{section_name}"
 Target role: {job_title}
 
-CRITICAL GAPS — required skills the JD demands that are MISSING from this CV:
+MISSING CRITICAL — required skills the JD demands that are absent from this CV:
 {missing_critical}
 
-NICE-TO-HAVE GAPS — preferred by the JD:
+MISSING NICE-TO-HAVE — preferred by the JD:
 {missing_nice_to_have}
 
-ALREADY COVERED — keywords already present in the CV. Preserve any that appear in this section verbatim:
+ALREADY COVERED — preserve any that appear in this section verbatim:
 {existing_keywords}
 
 Full CV (context only — do not duplicate content from other sections):
@@ -58,20 +67,71 @@ Full CV (context only — do not duplicate content from other sections):
 Current section — {section_name}:
 {section_content}
 
-Rules (in strict priority order):
-1. NEVER remove, paraphrase, or abbreviate any existing keyword, tool, technology, or metric — preserve them verbatim.
-2. INSERT gap keywords ONLY when you can anchor them to existing experience already described in this section or elsewhere in the full CV (e.g. a related tool, a similar domain, a transferable responsibility). Wrap every inserted phrase in an [AI: ...] marker using exact JD terminology — ATS matches literal strings. Example: "...using [AI: Docker] to containerise the existing Python services...". Do NOT insert a keyword you cannot plausibly anchor.
-3. For any gap keyword you CANNOT anchor to existing experience, add it to the "gaps" array instead of inserting it into the text. Do not mention gaps in the rewritten text.
-4. Return ONLY the section body content — bullet points or prose. Do NOT include the ## section heading in your output.
+Rules (strict priority order):
+1. NEVER remove, paraphrase, or abbreviate any existing keyword, tool, technology, or metric.
+2. INSERT a missing keyword ONLY when you can anchor it to existing experience in this section or
+   the full CV (a related tool, similar domain, transferable responsibility). Wrap every inserted
+   phrase in an [AI: ...] marker using exact JD terminology. Example:
+   "...using [AI: Docker] to containerise the existing Python services...".
+3. For any missing keyword you CANNOT anchor, simply leave it out. Do not mention it.
+4. Return ONLY the section body — bullet points or prose. Do NOT include the ## heading.
 5. Bullet points use strong past-tense action verbs; no "I" or "my".
-6. Keyword coverage beats stylistic polish — a denser, slightly less elegant rewrite that scores higher is correct.
+6. Keyword coverage beats stylistic polish.
 
 Return ONLY valid JSON:
 {{
-  "rewritten": "full rewritten section in markdown",
-  "gaps": ["keyword that could not be anchored", "another unanchorable keyword"]
+  "rewritten": "full rewritten section in markdown"
 }}
 """
+
+FORGE_SECTION_PROMPT_AGGRESSIVE = """\
+You are an aggressive ATS optimiser. Your single objective is maximum literal keyword coverage for
+the target role. The candidate personally reviews and deletes anything inaccurate, so err heavily
+toward inclusion.
+
+Section to rewrite: "{section_name}"
+Target role: {job_title}
+
+MISSING CRITICAL — INSERT EVERY ONE of these:
+{missing_critical}
+
+MISSING NICE-TO-HAVE — INSERT THESE TOO:
+{missing_nice_to_have}
+
+ALREADY COVERED — preserve any that appear in this section verbatim:
+{existing_keywords}
+
+Full CV (context only — do not duplicate content from other sections):
+{full_cv}
+
+Current section — {section_name}:
+{section_content}
+
+Rules (strict priority order):
+1. NEVER remove, paraphrase, or abbreviate any existing keyword, tool, technology, or metric.
+   Also preserve any existing [AI: ...] markers verbatim — they are already-reviewed insertions
+   from a prior pass.
+2. INSERT every missing keyword above into this section using exact JD terminology — ATS matches
+   literal strings. You do NOT need an anchor. If no real experience exists, FABRICATE plausible,
+   concrete bullet content using the keyword (realistic tools, tasks, and measurable outcomes for
+   the target role).
+3. Wrap EVERY phrase you insert or invent in an [AI: ...] marker so the candidate can find and
+   review it. Example: "- Built REST services with [AI: Docker] and [AI: Kubernetes] for
+   container orchestration, cutting deploy time by [AI: 40%]."
+4. Return ONLY the section body — bullet points or prose. Do NOT include the ## heading.
+5. Bullet points use strong past-tense action verbs; no "I" or "my".
+6. Coverage beats elegance — a denser rewrite naming more keywords is better.
+
+Return ONLY valid JSON:
+{{
+  "rewritten": "full rewritten section in markdown"
+}}
+"""
+
+FORGE_PROMPTS: dict[ForgeStrategy, str] = {
+    ForgeStrategy.ANCHORED: FORGE_SECTION_PROMPT_ANCHORED,
+    ForgeStrategy.AGGRESSIVE: FORGE_SECTION_PROMPT_AGGRESSIVE,
+}
 
 MATCH_SCORE_PROMPT = """\
 Score how well this CV covers the following requirements.

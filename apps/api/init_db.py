@@ -15,7 +15,7 @@ async def main():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             await conn.execute(text(
-                "ALTER TABLE tailored_cvs ADD COLUMN IF NOT EXISTS gaps_json TEXT"
+                "ALTER TABLE tailored_cvs DROP COLUMN IF EXISTS gaps_json"
             ))
         print("DB schema ready")
         await engine.dispose()

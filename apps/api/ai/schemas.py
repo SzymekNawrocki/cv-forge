@@ -13,7 +13,8 @@ class JDAnalysis(BaseModel):
 
 class ForgeResult(BaseModel):
     rewritten: str = ""
-    gaps: list[str] = []
+
+    model_config = {"extra": "ignore"}
 
 
 class MatchScore(BaseModel):
