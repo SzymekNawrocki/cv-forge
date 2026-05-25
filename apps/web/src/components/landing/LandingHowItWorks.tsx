@@ -21,120 +21,53 @@ const steps = [
 
 export function LandingHowItWorks() {
   return (
-    <section
-      style={{
-        padding: '100px 24px',
-        borderTop: '1px solid #1E1E20',
-        borderBottom: '1px solid #1E1E20',
-      }}
-    >
-      <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
+    <section className="py-[100px] px-6 border-t border-forge-elevated border-b border-b-forge-elevated">
+      <div className="max-w-[1120px] mx-auto">
         {/* Section header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '72px' }}>
+        <div className="flex items-center gap-4 mb-[72px]">
           <div
-            style={{
-              width: '3px',
-              height: '34px',
-              background: 'linear-gradient(180deg, #FF5722 0%, #FFC947 100%)',
-              borderRadius: '2px',
-              flexShrink: 0,
-            }}
+            className="w-[3px] h-[34px] rounded-[2px] shrink-0"
+            style={{ background: 'linear-gradient(180deg, #FF5722 0%, #FFC947 100%)' }}
           />
           <h2
-            style={{
-              fontFamily: '"Barlow Condensed", sans-serif',
-              fontSize: 'clamp(28px, 4vw, 38px)',
-              fontWeight: 800,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              color: '#E2E2E4',
-              margin: 0,
-            }}
+            className="font-display font-extrabold tracking-[0.06em] uppercase text-forge-text m-0"
+            style={{ fontSize: 'clamp(28px, 4vw, 38px)' }}
           >
             How It Works
           </h2>
         </div>
 
         {/* Steps */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          }}
-        >
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
           {steps.map((step) => (
             <div
               key={step.number}
-              className="landing-step"
-              style={{
-                position: 'relative',
-                padding: '48px 44px',
-                overflow: 'hidden',
-              }}
+              className="landing-step relative py-12 px-11 overflow-hidden"
             >
               {/* Ghost number background */}
               <div
                 aria-hidden="true"
-                style={{
-                  position: 'absolute',
-                  top: '-16px',
-                  right: '-4px',
-                  fontFamily: '"Barlow Condensed", sans-serif',
-                  fontSize: 'clamp(110px, 14vw, 180px)',
-                  fontWeight: 800,
-                  color: 'rgba(255,255,255,0.028)',
-                  lineHeight: 1,
-                  userSelect: 'none',
-                  pointerEvents: 'none',
-                  letterSpacing: '-0.02em',
-                }}
+                className="absolute top-[-16px] right-[-4px] font-display font-extrabold text-white/[0.028] leading-none select-none pointer-events-none tracking-[-0.02em]"
+                style={{ fontSize: 'clamp(110px, 14vw, 180px)' }}
               >
                 {step.number}
               </div>
 
               {/* Step label */}
-              <p
-                style={{
-                  fontFamily: '"Barlow Condensed", sans-serif',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  letterSpacing: '0.24em',
-                  textTransform: 'uppercase',
-                  color: '#FF5722',
-                  margin: '0 0 20px',
-                }}
-              >
+              <p className="font-display text-[10px] font-bold tracking-[0.24em] uppercase text-forge-orange mb-5">
                 {step.label}
               </p>
 
               {/* Title */}
               <h3
-                style={{
-                  fontFamily: '"Barlow Condensed", sans-serif',
-                  fontSize: 'clamp(22px, 3vw, 30px)',
-                  fontWeight: 800,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  color: '#E2E2E4',
-                  lineHeight: 1.08,
-                  margin: '0 0 22px',
-                  whiteSpace: 'pre-line',
-                }}
+                className="font-display font-extrabold tracking-[0.04em] uppercase text-forge-text leading-[1.08] mb-[22px] whitespace-pre-line"
+                style={{ fontSize: 'clamp(22px, 3vw, 30px)' }}
               >
                 {step.title}
               </h3>
 
               {/* Body */}
-              <p
-                style={{
-                  fontFamily: '"IBM Plex Sans", sans-serif',
-                  fontSize: '14px',
-                  fontWeight: 300,
-                  color: '#7A7A84',
-                  lineHeight: 1.8,
-                  margin: 0,
-                }}
-              >
+              <p className="font-body font-light text-forge-muted text-sm leading-[1.8] m-0">
                 {step.body}
               </p>
             </div>

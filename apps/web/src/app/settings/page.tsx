@@ -3,7 +3,6 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { getProfile, updateProfile } from "@/lib/api";
-import { F } from "@/lib/theme";
 
 const FREE_MODELS: { id: string; label: string }[] = [
   { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B — Groq (recommended)" },
@@ -41,58 +40,30 @@ export default function SettingsPage() {
   }
 
   return (
-    <main style={{
-      minHeight: "100vh",
-      background: "#0D0D0E",
-      color: "#E2E2E4",
-      fontFamily: F.body,
-      padding: "48px 28px",
-    }}>
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
-        <h1 style={{
-          fontFamily: F.display,
-          fontWeight: 800,
-          fontSize: 32,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          color: "#E2E2E4",
-          marginBottom: 8,
-        }}>
+    <main className="min-h-screen bg-forge-base text-forge-text font-body py-12 px-7">
+      <div className="max-w-[560px] mx-auto">
+        <h1 className="font-display font-extrabold text-3xl tracking-[0.06em] uppercase text-forge-text mb-2">
           Settings
         </h1>
-        <p style={{ color: "#888", fontSize: 14, marginBottom: 40 }}>
+        <p className="text-forge-muted text-sm mb-10">
           Global preferences for CV Forge.
         </p>
 
-        <section style={{
-          background: "#141416",
-          border: "1px solid #1E1E20",
-          borderRadius: 8,
-          padding: "24px 28px",
-          marginBottom: 24,
-        }}>
-          <h2 style={{
-            fontFamily: F.display,
-            fontWeight: 700,
-            fontSize: 14,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            color: "#888",
-            marginBottom: 16,
-          }}>
+        <section className="bg-[#141416] border border-forge-elevated rounded-lg px-7 py-6 mb-6">
+          <h2 className="font-display font-bold text-sm tracking-[0.1em] uppercase text-forge-muted mb-4">
             AI Model
           </h2>
-          <p style={{ fontSize: 13, color: "#888", marginBottom: 16, lineHeight: 1.6 }}>
+          <p className="text-[13px] text-forge-muted mb-4 leading-[1.6]">
             Primary model used for CV forging. If it hits a rate limit, the app
             automatically falls back through the remaining free models.
           </p>
 
           {!profile && !loadError && (
-            <p style={{ color: "#666", fontSize: 13 }}>Loading…</p>
+            <p className="text-[#666] text-[13px]">Loading…</p>
           )}
 
           {loadError && (
-            <p style={{ color: "#ff5722", fontSize: 13 }}>Failed to load settings.</p>
+            <p className="text-forge-orange text-[13px]">Failed to load settings.</p>
           )}
 
           {profile && (
@@ -100,18 +71,7 @@ export default function SettingsPage() {
               <select
                 value={activeModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
-                style={{
-                  width: "100%",
-                  background: "#0D0D0E",
-                  border: "1px solid #2a2a2d",
-                  borderRadius: 6,
-                  color: "#E2E2E4",
-                  fontSize: 13,
-                  padding: "10px 12px",
-                  marginBottom: 16,
-                  outline: "none",
-                  cursor: "pointer",
-                }}
+                className="forge-input w-full bg-forge-base border border-[#2A2A2D] rounded-md text-forge-text text-[13px] py-2.5 px-3 mb-4 outline-none cursor-pointer"
               >
                 {FREE_MODELS.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -120,30 +80,19 @@ export default function SettingsPage() {
                 ))}
               </select>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div className="flex items-center gap-3">
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  style={{
-                    background: "#FF5722",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 6,
-                    padding: "9px 20px",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: saving ? "not-allowed" : "pointer",
-                    opacity: saving ? 0.7 : 1,
-                    transition: "opacity 0.15s",
-                  }}
+                  className="bg-forge-orange text-white border-none rounded-md py-[9px] px-5 text-[13px] font-semibold cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed transition-opacity"
                 >
                   {saving ? "Saving…" : "Save"}
                 </button>
                 {saved && (
-                  <span style={{ color: "#4caf50", fontSize: 13 }}>Saved</span>
+                  <span className="text-[#4caf50] text-[13px]">Saved</span>
                 )}
                 {saveError && (
-                  <span style={{ color: "#ff5722", fontSize: 13 }}>{saveError}</span>
+                  <span className="text-forge-orange text-[13px]">{saveError}</span>
                 )}
               </div>
             </>

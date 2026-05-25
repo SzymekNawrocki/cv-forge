@@ -1,13 +1,6 @@
 export default function Loading() {
   return (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minHeight: "60vh",
-      color: "#9CA3AF",
-      fontSize: "14px",
-    }}>
+    <div className="flex items-center justify-center min-h-[60vh] text-[#9CA3AF] text-sm">
       Loading…
     </div>
   );

@@ -1,154 +1,20 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
-import { F } from "@/lib/theme";
+import ForgeSpinner from "./ForgeSpinner";
+import ScoreBadge from "./ScoreBadge";
+import CVEditor from "./CVEditor";
 import type { MasterCV, TailoredCV } from "@/lib/api";
-import type { CVData, CVSection } from "@/components/CVDocument";
+import type { CVData } from "@/components/CVDocument";
 
 const CVViewer = dynamic(() => import("@/components/CVViewer"), {
   ssr: false,
   loading: () => (
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#5C5C70", fontFamily: F.body, fontSize: "13px" }}>
+    <div className="flex-1 flex items-center justify-center text-[#5C5C70] font-body text-[13px]">
       Loading preview...
     </div>
   ),
 });
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function scoreColor(s: number)  { return s >= 75 ? "#4ADE80" : s >= 50 ? "#FF8C42" : "#F87171"; }
-function scoreBg(s: number)     { return s >= 75 ? "rgba(74,222,128,0.08)" : s >= 50 ? "rgba(255,140,66,0.08)" : "rgba(248,113,113,0.08)"; }
-function scoreBorder(s: number) { return s >= 75 ? "rgba(74,222,128,0.22)" : s >= 50 ? "rgba(255,140,66,0.22)" : "rgba(248,113,113,0.22)"; }
-
-function ScoreBadge({ label, score }: { label: string; score: number | null }) {
-  if (score === null) return null;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "6px 14px", background: scoreBg(score), border: `1px solid ${scoreBorder(score)}`, borderRadius: "8px", minWidth: "64px" }}>
-      <span style={{ fontFamily: F.display, fontSize: "24px", fontWeight: 800, letterSpacing: "0.04em", color: scoreColor(score), lineHeight: 1 }}>
-        {Math.round(score)}
-      </span>
-      <span style={{ fontFamily: F.body, fontSize: "9px", fontWeight: 500, letterSpacing: "0.10em", textTransform: "uppercase" as const, color: "#7A7A84", marginTop: "2px" }}>
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function ForgeSpinner({ size = 16 }: { size?: number }) {
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%",
-      border: `${size <= 20 ? 2 : 3}px solid rgba(255,87,34,0.25)`,
-      borderTopColor: "#FF5722",
-      animation: "forge-spin 0.75s linear infinite",
-      boxShadow: size > 20 ? "0 0 16px rgba(255,87,34,0.28)" : "none",
-      flexShrink: 0,
-    }} />
-  );
-}
-
-// ── Section Editor ────────────────────────────────────────────────────────────
-
-function SectionEditor({ section, onChange }: { section: CVSection; onChange: (updated: CVSection) => void }) {
-  const [open, setOpen] = useState(false);
-
-  function updateParagraph(content: string) { onChange({ ...section, content }); }
-  function updateBullets(raw: string) {
-    const items = raw.split("\n").map((l) => l.replace(/^[-•]\s*/, "").trim()).filter(Boolean);
-    onChange({ ...section, items });
-  }
-  function updateEntryBullets(entryIdx: number, raw: string) {
-    const bullets = raw.split("\n").map((l) => l.replace(/^[-•]\s*/, "").trim()).filter(Boolean);
-    const entries = section.entries!.map((e, i) => i === entryIdx ? { ...e, bullets } : e);
-    onChange({ ...section, entries });
-  }
-
-  const preview =
-    section.type === "paragraph" ? (section.content ?? "").slice(0, 80) + "..."
-    : section.type === "bullets" ? `${section.items?.length ?? 0} items`
-    : `${section.entries?.length ?? 0} entries`;
-
-  return (
-    <div style={{ borderBottom: "1px solid #1E1E20" }}>
-      <button
-        onClick={() => setOpen(!open)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
-      >
-        <span style={{ fontFamily: F.display, fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: "#B0BEC5" }}>
-          {section.heading}
-        </span>
-        <span style={{ fontFamily: F.body, fontSize: "10px", color: "#5C5C66" }}>
-          {open ? "▲" : "▼"} {!open && preview}
-        </span>
-      </button>
-      {open && (
-        <div style={{ paddingBottom: "12px" }}>
-          {section.type === "paragraph" && (
-            <textarea value={section.content ?? ""} onChange={(e) => updateParagraph(e.target.value)} rows={5}
-              style={{ width: "100%", boxSizing: "border-box", background: "#0D0D0E", border: "1px solid #222224", borderRadius: "5px", padding: "8px 10px", fontFamily: F.body, fontSize: "12px", color: "#B0BEC5", resize: "vertical", outline: "none", lineHeight: 1.6 }} />
-          )}
-          {section.type === "bullets" && (
-            <textarea value={(section.items ?? []).join("\n")} onChange={(e) => updateBullets(e.target.value)} rows={Math.max(4, (section.items ?? []).length + 1)}
-              style={{ width: "100%", boxSizing: "border-box", background: "#0D0D0E", border: "1px solid #222224", borderRadius: "5px", padding: "8px 10px", fontFamily: F.body, fontSize: "12px", color: "#B0BEC5", resize: "vertical", outline: "none", lineHeight: 1.6 }} />
-          )}
-          {section.type === "entries" && section.entries?.map((entry, i) => (
-            <div key={i} style={{ marginBottom: "10px" }}>
-              <div style={{ fontFamily: F.body, fontSize: "11px", color: "#7A7A84", marginBottom: "4px" }}>
-                <strong style={{ color: "#B0BEC5" }}>{entry.org}</strong> — {entry.role} — {entry.date}
-              </div>
-              <textarea value={entry.bullets.join("\n")} onChange={(e) => updateEntryBullets(i, e.target.value)} rows={Math.max(2, entry.bullets.length + 1)}
-                style={{ width: "100%", boxSizing: "border-box", background: "#0D0D0E", border: "1px solid #222224", borderRadius: "5px", padding: "8px 10px", fontFamily: F.body, fontSize: "12px", color: "#B0BEC5", resize: "vertical", outline: "none", lineHeight: 1.6 }} />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CVEditor({ data, onChange }: { data: CVData; onChange: (d: CVData) => void }) {
-  function updateSection(idx: number, updated: CVSection) {
-    const sections = data.sections.map((s, i) => i === idx ? updated : s);
-    onChange({ ...data, sections });
-  }
-  function updateField(field: keyof CVData, value: string) { onChange({ ...data, [field]: value }); }
-  function updateContact(field: keyof CVData["contact"], value: string) {
-    onChange({ ...data, contact: { ...data.contact, [field]: value } });
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-      <div style={{ borderBottom: "1px solid #1E1E20", paddingBottom: "12px", marginBottom: "4px" }}>
-        <div style={{ fontFamily: F.display, fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#5C5C66", marginBottom: "8px" }}>Header</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-          {([
-            { label: "Name", field: "name" as keyof CVData, val: data.name },
-            { label: "Title", field: "title" as keyof CVData, val: data.title },
-          ]).map(({ label, field, val }) => (
-            <div key={field}>
-              <div style={{ fontFamily: F.body, fontSize: "10px", color: "#5C5C66", marginBottom: "3px" }}>{label}</div>
-              <input value={val as string} onChange={(e) => updateField(field, e.target.value)}
-                style={{ width: "100%", boxSizing: "border-box", background: "#0D0D0E", border: "1px solid #222224", borderRadius: "4px", padding: "5px 8px", fontFamily: F.body, fontSize: "12px", color: "#E2E2E4", outline: "none" }} />
-            </div>
-          ))}
-          {(["email", "phone", "portfolio", "github", "location"] as const).map((f) => (
-            <div key={f}>
-              <div style={{ fontFamily: F.body, fontSize: "10px", color: "#5C5C66", marginBottom: "3px", textTransform: "capitalize" as const }}>{f}</div>
-              <input value={data.contact[f] ?? ""} onChange={(e) => updateContact(f, e.target.value)}
-                style={{ width: "100%", boxSizing: "border-box", background: "#0D0D0E", border: "1px solid #222224", borderRadius: "4px", padding: "5px 8px", fontFamily: F.body, fontSize: "12px", color: "#E2E2E4", outline: "none" }} />
-            </div>
-          ))}
-        </div>
-      </div>
-      {data.sections.map((section, i) => (
-        <SectionEditor key={i} section={section} onChange={(u) => updateSection(i, u)} />
-      ))}
-    </div>
-  );
-}
-
-// ── Review Phase ──────────────────────────────────────────────────────────────
 
 interface Props {
   result: TailoredCV;
@@ -176,124 +42,130 @@ export default function ForgeReview({
 }: Props) {
   const failedSections = result.failed_sections ?? [];
 
-  const forgeBtn = {
-    position: "relative" as const, display: "flex", alignItems: "center", gap: "8px",
-    padding: "8px 16px",
-    background: isPending ? "#1A1A1C" : "linear-gradient(135deg, #FF5722, #FF8C42)",
-    border: `1px solid ${isPending ? "#272729" : "transparent"}`,
-    borderRadius: "6px", cursor: isPending ? "not-allowed" : "pointer",
-    fontFamily: F.display, fontSize: "12px", fontWeight: 700, letterSpacing: "0.12em",
-    textTransform: "uppercase" as const,
-    color: isPending ? "#3A3A3E" : "#fff",
-    boxShadow: !isPending ? "0 0 10px rgba(255,87,34,0.18), 0 2px 8px rgba(0,0,0,0.40)" : "none",
-    transition: "all 0.20s cubic-bezier(0.25,0.46,0.45,0.94)",
-  };
-
   return (
-    <main style={{ height: "calc(100vh - 52px)", display: "flex", flexDirection: "column", padding: "16px 24px", gap: "12px", background: "#0D0D0E", overflow: "hidden" }}>
+    <main className="h-[calc(100vh-52px)] flex flex-col p-4 px-6 gap-3 bg-forge-base overflow-hidden">
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" as const }}>
-        <h1 style={{ fontFamily: F.display, fontSize: "22px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#E2E2E4", margin: 0, lineHeight: 1 }}>
-          FORGE<span style={{ color: "#FF5722" }}> /</span>
+      <div className="flex items-center gap-4 flex-wrap">
+        <h1 className="font-display text-[22px] font-extrabold tracking-[0.08em] uppercase text-forge-text m-0 leading-none">
+          FORGE<span className="text-forge-orange"> /</span>
         </h1>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className="flex items-center gap-2">
           <ScoreBadge label="Before" score={result.initial_match_score} />
-          <span style={{ color: "#3A3A3E", fontSize: "14px" }}>→</span>
+          <span className="text-[#3A3A3E] text-sm">→</span>
           <ScoreBadge label="After" score={result.match_score} />
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "5px", padding: "5px 10px", background: "rgba(180,83,9,0.08)", border: "1px solid rgba(180,83,9,0.20)", borderRadius: "5px" }}>
-            <span style={{ fontFamily: F.body, fontSize: "10px", color: "#B45309", fontWeight: 700 }}>AI</span>
-            <span style={{ fontFamily: F.body, fontSize: "10px", color: "#7A7A84" }}>&nbsp;= AI insertion — review &amp; delete if inaccurate</span>
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-[5px] py-[5px] px-2.5 bg-[rgba(180,83,9,0.08)] border border-[rgba(180,83,9,0.20)] rounded-[5px]">
+            <span className="font-body text-[10px] text-[#B45309] font-bold">AI</span>
+            <span className="font-body text-[10px] text-forge-muted">&nbsp;= AI insertion — review &amp; delete if inaccurate</span>
           </div>
 
           {/* Aggressive toggle */}
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", userSelect: "none" as const }}>
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <div
               onClick={() => onAggressiveToggle(!aggressive)}
+              className="relative cursor-pointer w-[28px] h-[15px] rounded-lg border transition-[background,border-color] duration-[180ms]"
               style={{
-                width: "28px", height: "15px", borderRadius: "8px",
                 background: aggressive ? "#FF5722" : "#272729",
-                border: `1px solid ${aggressive ? "#FF5722" : "#3A3A3E"}`,
-                position: "relative", cursor: "pointer",
-                transition: "background 0.18s, border-color 0.18s",
+                borderColor: aggressive ? "#FF5722" : "#3A3A3E",
               }}
             >
-              <div style={{
-                position: "absolute", top: "1px",
-                left: aggressive ? "13px" : "1px",
-                width: "11px", height: "11px", borderRadius: "50%",
-                background: "#E2E2E4",
-                transition: "left 0.18s",
-              }} />
+              <div
+                className="absolute top-[1px] w-[11px] h-[11px] rounded-full bg-forge-text transition-[left] duration-[180ms]"
+                style={{ left: aggressive ? "13px" : "1px" }}
+              />
             </div>
-            <span style={{ fontFamily: F.body, fontSize: "10px", color: aggressive ? "#FF8C42" : "#5C5C66", fontWeight: aggressive ? 700 : 400 }}>
+            <span
+              className="font-body text-[10px]"
+              style={{ color: aggressive ? "#FF8C42" : "#5C5C66", fontWeight: aggressive ? 700 : 400 }}
+            >
               Aggressive
             </span>
           </label>
 
-          <button onClick={onForge} disabled={isPending} style={forgeBtn}>
+          <button
+            onClick={onForge}
+            disabled={isPending}
+            className={`relative flex items-center gap-2 py-2 px-4 rounded-md font-display text-xs font-bold tracking-[0.12em] uppercase transition-all duration-200 border ${
+              isPending
+                ? "border-forge-border cursor-not-allowed text-[#3A3A3E]"
+                : "border-transparent cursor-pointer text-white shadow-[0_0_10px_rgba(255,87,34,0.18),0_2px_8px_rgba(0,0,0,0.40)]"
+            }`}
+            style={{ background: isPending ? "#1A1A1C" : "linear-gradient(135deg, #FF5722, #FF8C42)" }}
+          >
             {isPending && <ForgeSpinner size={13} />}
-            <span style={{ position: "relative" }}>{isPending ? "Forging..." : "⟳ Reforge"}</span>
+            <span className="relative">{isPending ? "Forging..." : "⟳ Reforge"}</span>
           </button>
         </div>
       </div>
 
       {/* Failed sections banner */}
       {failedSections.length > 0 && (
-        <div style={{ padding: "8px 14px", background: "rgba(255,140,66,0.06)", border: "1px solid rgba(255,140,66,0.20)", borderRadius: "6px", fontFamily: F.body, fontSize: "11px", color: "#FF8C42" }}>
+        <div className="py-2 px-3.5 bg-[rgba(255,140,66,0.06)] border border-[rgba(255,140,66,0.20)] rounded-md font-body text-[11px] text-forge-heat">
           {failedSections.length} section{failedSections.length > 1 ? "s" : ""} couldn&apos;t be optimized — Reforge to retry.
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div style={{ padding: "10px 14px", background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.20)", borderRadius: "7px", fontFamily: F.body, fontSize: "12px", color: "#F87171" }}>
+        <div className="py-2.5 px-3.5 bg-[rgba(248,113,113,0.06)] border border-[rgba(248,113,113,0.20)] rounded-[7px] font-body text-xs text-[#F87171]">
           {error}
         </div>
       )}
 
       {/* Two-column body */}
-      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "200px 1fr", gap: "16px", minHeight: 0 }}>
+      <div className="flex-1 grid gap-4 min-h-0" style={{ gridTemplateColumns: "200px 1fr" }}>
         {/* Left: JD + CV selector */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px", minHeight: 0 }}>
-          <label style={{ fontFamily: F.display, fontSize: "10px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase" as const, color: "#5C5C66", flexShrink: 0 }}>Job Description</label>
-          <textarea readOnly value={jdText}
-            style={{ flex: 1, background: "#111113", border: "1px solid #1A1A1C", borderRadius: "6px", padding: "10px 12px", fontFamily: F.body, fontSize: "11px", color: "#5C5C66", resize: "none", outline: "none", lineHeight: 1.6, cursor: "default" }} />
-          <div style={{ position: "relative", flexShrink: 0 }}>
+        <div className="flex flex-col gap-1.5 min-h-0">
+          <label className="font-display text-[10px] font-bold tracking-[0.16em] uppercase text-[#5C5C66] shrink-0">
+            Job Description
+          </label>
+          <textarea
+            readOnly
+            value={jdText}
+            className="flex-1 bg-[#111113] border border-[#1A1A1C] rounded-md py-2.5 px-3 font-body text-[11px] text-[#5C5C66] resize-none outline-none leading-[1.6] cursor-default"
+          />
+          <div className="relative shrink-0">
             <select
-              style={{ width: "100%", appearance: "none", WebkitAppearance: "none", background: "#111113", border: "1px solid #1A1A1C", borderRadius: "6px", padding: "7px 28px 7px 10px", fontFamily: F.body, fontSize: "11px", color: "#7A7A84", cursor: "pointer", outline: "none" }}
+              className="w-full appearance-none bg-[#111113] border border-[#1A1A1C] rounded-md py-[7px] pl-2.5 pr-7 font-body text-[11px] text-forge-muted cursor-pointer outline-none"
               value={selectedId}
               onChange={(e) => onSelectId(Number(e.target.value))}
             >
               {cvs.map((cv) => (
-                <option key={cv.id} value={cv.id} style={{ background: "#161618", color: "#E2E2E4" }}>{cv.title}</option>
+                <option key={cv.id} value={cv.id} className="bg-forge-surface text-forge-text">{cv.title}</option>
               ))}
             </select>
-            <span style={{ position: "absolute", right: "9px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#5C5C66", fontSize: "10px" }}>▾</span>
+            <span className="absolute right-[9px] top-1/2 -translate-y-1/2 pointer-events-none text-[#5C5C66] text-[10px]">▾</span>
           </div>
         </div>
 
         {/* Center: Preview / Edit */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px", minHeight: 0 }}>
-          <div style={{ display: "flex", gap: "4px", alignItems: "center", flexShrink: 0 }}>
+        <div className="flex flex-col gap-2 min-h-0">
+          <div className="flex gap-1 items-center shrink-0">
             {(["preview", "edit"] as const).map((tab) => (
-              <button key={tab} onClick={() => onTabChange(tab)}
-                style={{ padding: "5px 14px", background: rightTab === tab ? "#1E1E20" : "none", border: `1px solid ${rightTab === tab ? "#2A2A2C" : "transparent"}`, borderRadius: "5px", fontFamily: F.display, fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: rightTab === tab ? "#E2E2E4" : "#5C5C66", cursor: "pointer" }}>
+              <button
+                key={tab}
+                onClick={() => onTabChange(tab)}
+                className={`py-[5px] px-3.5 font-display text-[10px] font-bold tracking-[0.12em] uppercase cursor-pointer rounded-[5px] border transition-colors ${
+                  rightTab === tab
+                    ? "bg-forge-elevated border-[#2A2A2C] text-forge-text"
+                    : "bg-transparent border-transparent text-[#5C5C66]"
+                }`}
+              >
                 {tab}
               </button>
             ))}
-            <span style={{ fontFamily: F.display, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase" as const, color: "#3A3A3E", marginLeft: "auto" }}>
+            <span className="font-display text-[10px] tracking-[0.16em] uppercase text-[#3A3A3E] ml-auto">
               CV #{result.id}
             </span>
           </div>
           {rightTab === "preview" && (
-            <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <div className="flex-1 min-h-0 flex flex-col">
               <CVViewer data={cvData} cvId={result.id} cleanData={cleanData ?? undefined} />
             </div>
           )}
           {rightTab === "edit" && (
-            <div style={{ flex: 1, overflowY: "auto", background: "#161618", border: "1px solid #222224", borderRadius: "7px", padding: "16px" }}>
+            <div className="flex-1 overflow-y-auto bg-forge-surface border border-[#222224] rounded-[7px] p-4">
               <CVEditor data={cvData} onChange={onEditedData} />
             </div>
           )}

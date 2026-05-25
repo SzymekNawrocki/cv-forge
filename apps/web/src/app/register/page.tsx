@@ -31,29 +31,15 @@ export default function RegisterPage() {
 
   if (done) {
     return (
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#0D0D0E",
-      }}>
-        <div style={{
-          width: "100%",
-          maxWidth: "400px",
-          padding: "40px",
-          background: "#111113",
-          border: "1px solid #1E1E20",
-          borderRadius: "12px",
-          textAlign: "center",
-        }}>
-          <div style={{ fontSize: "40px", marginBottom: "16px" }}>📬</div>
-          <h2 style={{ color: "#E2E2E4", fontSize: "20px", marginBottom: "12px" }}>Check your email</h2>
-          <p style={{ color: "#888", fontSize: "14px", lineHeight: 1.6 }}>
-            We sent a verification link to <strong style={{ color: "#E2E2E4" }}>{email}</strong>.
+      <div className="min-h-screen flex items-center justify-center bg-forge-base">
+        <div className="w-full max-w-[400px] p-10 bg-[#111113] border border-forge-elevated rounded-xl text-center">
+          <div className="text-[40px] mb-4">📬</div>
+          <h2 className="text-forge-text text-xl mb-3">Check your email</h2>
+          <p className="text-[#888] text-sm leading-[1.6]">
+            We sent a verification link to <strong className="text-forge-text">{email}</strong>.
             Click the link to activate your account.
           </p>
-          <a href="/login" style={{ display: "inline-block", marginTop: "24px", color: "#FF5722", fontSize: "13px", textDecoration: "none" }}>
+          <a href="/login" className="inline-block mt-6 text-forge-orange text-[13px] no-underline">
             Back to sign in
           </a>
         </div>
@@ -62,30 +48,23 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "#0D0D0E",
-    }}>
-      <div style={{
-        width: "100%",
-        maxWidth: "400px",
-        padding: "40px",
-        background: "#111113",
-        border: "1px solid #1E1E20",
-        borderRadius: "12px",
-        textAlign: "center",
-      }}>
-        <div style={{ display: "flex", justifyContent: "center", margin: "-40px 0 -60px" }}>
-          <Image src="/cv-forge-logo.png" alt="CV Forge" height={52} width={200} style={{ objectFit: "contain", display: "block" }} priority />
+    <div className="min-h-screen flex items-center justify-center bg-forge-base">
+      <div className="w-full max-w-[400px] p-10 bg-[#111113] border border-forge-elevated rounded-xl text-center">
+        <div className="flex justify-center -mt-10 -mb-[60px]">
+          <Image
+            src="/cv-forge-logo.png"
+            alt="CV Forge"
+            height={52}
+            width={200}
+            className="object-contain block"
+            priority
+          />
         </div>
-        <p style={{ color: "#888", fontSize: "14px", marginBottom: "32px" }}>Create your account</p>
+        <p className="text-[#888] text-sm mb-8">Create your account</p>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label style={{ display: "block", fontSize: "12px", color: "#999", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <label className="block text-xs text-[#999] mb-1.5 uppercase tracking-[0.05em]">
               Email
             </label>
             <input
@@ -93,20 +72,11 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                background: "#1A1A1C",
-                border: "1px solid #2A2A2E",
-                borderRadius: "6px",
-                color: "#E2E2E4",
-                fontSize: "14px",
-                boxSizing: "border-box",
-              }}
+              className="forge-input w-full py-2.5 px-3.5 bg-[#1A1A1C] border border-[#2A2A2E] rounded-md text-forge-text text-sm"
             />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: "12px", color: "#999", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <label className="block text-xs text-[#999] mb-1.5 uppercase tracking-[0.05em]">
               Password
             </label>
             <input
@@ -115,46 +85,27 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                background: "#1A1A1C",
-                border: "1px solid #2A2A2E",
-                borderRadius: "6px",
-                color: "#E2E2E4",
-                fontSize: "14px",
-                boxSizing: "border-box",
-              }}
+              className="forge-input w-full py-2.5 px-3.5 bg-[#1A1A1C] border border-[#2A2A2E] rounded-md text-forge-text text-sm"
             />
-            <p style={{ fontSize: "11px", color: "#555", marginTop: "4px" }}>Minimum 8 characters</p>
+            <p className="text-[11px] text-[#555] mt-1">Minimum 8 characters</p>
           </div>
 
           {error && (
-            <p style={{ color: "#FF5722", fontSize: "13px", margin: 0 }}>{error}</p>
+            <p className="text-forge-orange text-[13px] m-0">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            style={{
-              padding: "11px",
-              background: "#FF5722",
-              border: "none",
-              borderRadius: "6px",
-              color: "#fff",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.7 : 1,
-            }}
+            className="py-[11px] bg-forge-orange border-none rounded-md text-white text-sm font-semibold cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed transition-opacity"
           >
             {loading ? "Creating account…" : "Create account"}
           </button>
         </form>
 
-        <p style={{ textAlign: "center", marginTop: "24px", fontSize: "13px", color: "#666" }}>
+        <p className="text-center mt-6 text-[13px] text-[#666]">
           Already have an account?{" "}
-          <a href="/login" style={{ color: "#FF5722", textDecoration: "none" }}>Sign in</a>
+          <a href="/login" className="text-forge-orange no-underline">Sign in</a>
         </p>
       </div>
     </div>

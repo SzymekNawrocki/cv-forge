@@ -1,26 +1,9 @@
 export default function NotFound() {
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      minHeight: "60vh",
-      gap: "12px",
-      color: "#E2E2E4",
-    }}>
-      <div style={{ fontSize: "72px", fontWeight: 800, color: "#FF5722", lineHeight: 1 }}>404</div>
-      <p style={{ color: "#9CA3AF", margin: 0 }}>Page not found.</p>
-      <a
-        href="/"
-        style={{
-          color: "#FF5722",
-          textDecoration: "none",
-          fontSize: "14px",
-          fontWeight: 600,
-          marginTop: "4px",
-        }}
-      >
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-forge-text">
+      <div className="text-7xl font-extrabold text-forge-orange leading-none">404</div>
+      <p className="text-[#9CA3AF] m-0">Page not found.</p>
+      <a href="/" className="text-forge-orange no-underline text-sm font-semibold mt-1">
         Go home
       </a>
     </div>

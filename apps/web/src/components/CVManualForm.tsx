@@ -16,35 +16,8 @@ import {
   type UserProfile,
 } from "@/lib/api";
 
-const F = {
-  display: '"Barlow Condensed", sans-serif',
-  body: '"IBM Plex Sans", sans-serif',
-  mono: '"IBM Plex Mono", "Courier New", monospace',
-};
-
-const inputStyle: React.CSSProperties = {
-  background: '#161618',
-  border: '1px solid #222224',
-  borderRadius: '6px',
-  padding: '9px 12px',
-  fontFamily: F.body,
-  fontSize: '13px',
-  color: '#E2E2E4',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-};
-
-const labelStyle: React.CSSProperties = {
-  fontFamily: F.display,
-  fontSize: '10px',
-  fontWeight: 700,
-  letterSpacing: '0.14em',
-  textTransform: 'uppercase',
-  color: '#9A9AA4',
-  display: 'block',
-  marginBottom: '5px',
-};
+const inputClass = "forge-input bg-forge-surface border border-[#222224] rounded-md py-[9px] px-3 font-body text-[13px] text-forge-text outline-none w-full box-border";
+const labelClass = "font-display text-[10px] font-bold tracking-[0.14em] uppercase text-[#9A9AA4] block mb-[5px]";
 
 function LabeledInput({
   label,
@@ -60,18 +33,14 @@ function LabeledInput({
   isLink?: boolean;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      <label style={labelStyle}>{label}</label>
-      <div style={{ position: 'relative' }}>
+    <div className="flex flex-col">
+      <label className={labelClass}>{label}</label>
+      <div className="relative">
         {isLink && (
-          <span style={{
-            position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
-            color: '#FF5722', fontFamily: F.mono, fontSize: '11px', pointerEvents: 'none',
-          }}>↗</span>
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-forge-orange font-mono text-[11px] pointer-events-none">↗</span>
         )}
         <input
-          className="forge-input"
-          style={{ ...inputStyle, paddingLeft: isLink ? '26px' : '12px' }}
+          className={`${inputClass} ${isLink ? 'pl-[26px]' : ''}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
@@ -86,22 +55,7 @@ function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
     <button
       type="button"
       onClick={onClick}
-      style={{
-        padding: '6px 14px',
-        background: 'transparent',
-        border: '1px dashed #272729',
-        borderRadius: '5px',
-        fontFamily: F.display,
-        fontSize: '11px',
-        fontWeight: 700,
-        letterSpacing: '0.12em',
-        textTransform: 'uppercase',
-        color: '#9A9AA4',
-        cursor: 'pointer',
-        transition: 'all 0.18s ease',
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FF5722'; e.currentTarget.style.color = '#FF5722'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#272729'; e.currentTarget.style.color = '#5C5C66'; }}
+      className="py-1.5 px-3.5 bg-transparent border border-dashed border-forge-border rounded-[5px] font-display text-[11px] font-bold tracking-[0.12em] uppercase text-[#9A9AA4] cursor-pointer transition-all duration-[180ms] hover:border-forge-orange hover:text-forge-orange"
     >
       + {label}
     </button>
@@ -113,19 +67,7 @@ function RemoveBtn({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      style={{
-        padding: '4px 8px',
-        background: 'transparent',
-        border: 'none',
-        color: '#5C5C70',
-        fontSize: '16px',
-        cursor: 'pointer',
-        lineHeight: 1,
-        flexShrink: 0,
-        transition: 'color 0.15s ease',
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.color = '#F87171'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = '#3A3A3E'; }}
+      className="py-1 px-2 bg-transparent border-none text-[#5C5C70] text-base cursor-pointer leading-none shrink-0 transition-colors duration-150 hover:text-[#F87171]"
     >
       ×
     </button>
@@ -134,17 +76,7 @@ function RemoveBtn({ onClick }: { onClick: () => void }) {
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{
-      borderTop: '1px solid #1E1E20',
-      paddingTop: '24px',
-      fontFamily: F.display,
-      fontSize: '11px',
-      fontWeight: 700,
-      letterSpacing: '0.18em',
-      textTransform: 'uppercase',
-      color: '#FF5722',
-      marginBottom: '14px',
-    }}>
+    <div className="border-t border-forge-elevated pt-6 font-display text-[11px] font-bold tracking-[0.18em] uppercase text-forge-orange mb-3.5">
       {children}
     </div>
   );
@@ -152,25 +84,14 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 
 function Card({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
   return (
-    <div style={{
-      background: '#161618',
-      border: '1px solid #1E1E20',
-      borderRadius: '8px',
-      padding: '14px 16px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '10px',
-      position: 'relative',
-    }}>
-      <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
+    <div className="bg-forge-surface border border-forge-elevated rounded-lg py-3.5 px-4 flex flex-col gap-2.5 relative">
+      <div className="absolute top-2.5 right-2.5">
         <RemoveBtn onClick={onRemove} />
       </div>
       {children}
     </div>
   );
 }
-
-// ── Skill chips ─────────────────────────────────────────────────────────────
 
 function SkillCategoryRow({
   cat,
@@ -205,38 +126,33 @@ function SkillCategoryRow({
   }
 
   return (
-    <div style={{ background: '#161618', border: '1px solid #1E1E20', borderRadius: '8px', padding: '12px 14px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+    <div className="bg-forge-surface border border-forge-elevated rounded-lg py-3 px-3.5">
+      <div className="flex items-center justify-between mb-2.5">
         <input
-          className="forge-input"
-          style={{ ...inputStyle, fontWeight: 600, fontSize: '12px', color: '#B0BEC5', width: 'auto', flex: 1, marginRight: '8px' }}
+          className={`${inputClass} font-semibold text-xs text-forge-steel w-auto flex-1 mr-2`}
           value={cat.category}
           onChange={(e) => onChange({ ...cat, category: e.target.value })}
           placeholder="Category name"
         />
         <RemoveBtn onClick={onRemove} />
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+      <div className="flex flex-wrap gap-1.5 items-center">
         {cat.items.map((item) => (
-          <span key={item} style={{
-            display: 'inline-flex', alignItems: 'center', gap: '4px',
-            background: '#1E1E20', border: '1px solid #272729', borderRadius: '4px',
-            padding: '3px 8px', fontFamily: F.body, fontSize: '12px', color: '#E2E2E4',
-          }}>
+          <span
+            key={item}
+            className="inline-flex items-center gap-1 bg-forge-elevated border border-forge-border rounded py-[3px] px-2 font-body text-xs text-forge-text"
+          >
             {item}
             <button
               type="button"
               onClick={() => removeItem(item)}
-              style={{ background: 'none', border: 'none', color: '#9A9AA4', cursor: 'pointer', lineHeight: 1, padding: '0 2px', fontSize: '13px' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#F87171'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#5C5C66'; }}
+              className="bg-none border-none text-[#9A9AA4] cursor-pointer leading-none px-0.5 text-[13px] hover:text-[#F87171] transition-colors"
             >×</button>
           </span>
         ))}
         <input
           ref={inputRef}
-          className="forge-input"
-          style={{ ...inputStyle, width: '120px', fontSize: '12px', padding: '3px 8px' }}
+          className={`${inputClass} w-[120px] text-xs py-[3px] px-2`}
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -248,8 +164,6 @@ function SkillCategoryRow({
   );
 }
 
-// ── Bullet list editor ───────────────────────────────────────────────────────
-
 function BulletListEditor({
   bullets,
   onChange,
@@ -258,14 +172,13 @@ function BulletListEditor({
   onChange: (updated: string[]) => void;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <label style={labelStyle}>Bullets</label>
+    <div className="flex flex-col gap-1.5">
+      <label className={labelClass}>Bullets</label>
       {bullets.map((b, i) => (
-        <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <span style={{ color: '#9A9AA4', fontFamily: F.mono, fontSize: '11px', flexShrink: 0 }}>–</span>
+        <div key={i} className="flex gap-1.5 items-center">
+          <span className="text-[#9A9AA4] font-mono text-[11px] shrink-0">–</span>
           <input
-            className="forge-input"
-            style={{ ...inputStyle, flex: 1 }}
+            className={`${inputClass} flex-1`}
             value={b}
             onChange={(e) => {
               const next = [...bullets];
@@ -281,8 +194,6 @@ function BulletListEditor({
     </div>
   );
 }
-
-// ── Main form ────────────────────────────────────────────────────────────────
 
 interface Props {
   profile: UserProfile | null;
@@ -310,7 +221,6 @@ export default function CVManualForm({ profile, onSuccess }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Pre-populate skills from DB
   const { data: dbSkills = [] } = useSWR("skills", fetchSkills);
   useEffect(() => {
     if (dbSkills.length > 0) {
@@ -318,7 +228,6 @@ export default function CVManualForm({ profile, onSuccess }: Props) {
     }
   }, [dbSkills]);
 
-  // Sync header from profile if profile loads after mount
   useEffect(() => {
     if (!profile) return;
     setHeader((prev) => ({
@@ -394,44 +303,32 @@ export default function CVManualForm({ profile, onSuccess }: Props) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+    <div className="flex flex-col gap-0">
 
       {/* CV Title */}
-      <div style={{ marginBottom: '20px' }}>
-        <LabeledInput
-          label="CV Title"
-          value={title}
-          onChange={setTitle}
-          placeholder="e.g. My Master CV"
-        />
+      <div className="mb-5">
+        <LabeledInput label="CV Title" value={title} onChange={setTitle} placeholder="e.g. My Master CV" />
       </div>
 
       {/* Header */}
-      <SectionHeader>Identity & Contact</SectionHeader>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+      <SectionHeader>Identity &amp; Contact</SectionHeader>
+      <div className="grid grid-cols-2 gap-3 mb-3">
         <LabeledInput label="Full Name *" value={header.name} onChange={setH("name")} placeholder="Szymon Nawrocki" />
         <LabeledInput label="Job Title *" value={header.job_title} onChange={setH("job_title")} placeholder="Web Developer" />
         <LabeledInput label="Email" value={header.email} onChange={setH("email")} placeholder="you@example.com" />
         <LabeledInput label="Phone" value={header.phone} onChange={setH("phone")} placeholder="+48 727 932 054" />
         <LabeledInput label="Location" value={header.location} onChange={setH("location")} placeholder="Warsaw" />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+      <div className="grid grid-cols-2 gap-3 mb-5">
         <LabeledInput label="Portfolio URL" value={header.portfolio_url} onChange={setH("portfolio_url")} placeholder="https://yoursite.com" isLink />
         <LabeledInput label="GitHub URL" value={header.github_url} onChange={setH("github_url")} placeholder="https://github.com/username" isLink />
       </div>
 
       {/* About Me */}
       <SectionHeader>About Me</SectionHeader>
-      <div style={{ marginBottom: '20px' }}>
+      <div className="mb-5">
         <textarea
-          className="forge-input"
-          style={{
-            ...inputStyle,
-            fontFamily: F.body,
-            resize: 'vertical',
-            minHeight: '100px',
-            lineHeight: 1.65,
-          }}
+          className={`${inputClass} resize-y min-h-[100px] leading-[1.65]`}
           value={aboutMe}
           onChange={(e) => setAboutMe(e.target.value)}
           placeholder="Brief professional summary..."
@@ -441,7 +338,7 @@ export default function CVManualForm({ profile, onSuccess }: Props) {
 
       {/* Skills */}
       <SectionHeader>Skills</SectionHeader>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+      <div className="flex flex-col gap-2 mb-3">
         {skills.map((cat, i) => (
           <SkillCategoryRow
             key={i}
@@ -451,27 +348,23 @@ export default function CVManualForm({ profile, onSuccess }: Props) {
           />
         ))}
       </div>
-      <div style={{ marginBottom: '20px' }}>
-        <AddBtn
-          onClick={() => setSkills((prev) => [...prev, { category: "", items: [] }])}
-          label="Add Category"
-        />
+      <div className="mb-5">
+        <AddBtn onClick={() => setSkills((prev) => [...prev, { category: "", items: [] }])} label="Add Category" />
       </div>
 
       {/* Projects */}
       <SectionHeader>Projects</SectionHeader>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
+      <div className="flex flex-col gap-2.5 mb-3">
         {projects.map((p, i) => (
           <Card key={i} onRemove={() => setProjects((prev) => prev.filter((_, j) => j !== i))}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', paddingRight: '28px' }}>
+            <div className="grid grid-cols-2 gap-2.5 pr-7">
               <LabeledInput label="Project Name" value={p.name} onChange={(v) => updateProject(i, "name", v)} placeholder="Hustle App" />
               <LabeledInput label="Date Range" value={p.date_range} onChange={(v) => updateProject(i, "date_range", v)} placeholder="Jan 2025 – present" />
             </div>
             <div>
-              <label style={labelStyle}>Description</label>
+              <label className={labelClass}>Description</label>
               <textarea
-                className="forge-input"
-                style={{ ...inputStyle, resize: 'vertical', minHeight: '70px', lineHeight: 1.55, fontSize: '12px', fontFamily: F.body }}
+                className={`${inputClass} resize-y min-h-[70px] leading-[1.55] text-xs`}
                 value={p.description}
                 onChange={(e) => updateProject(i, "description", e.target.value)}
                 placeholder="What did you build and what tech did you use?"
@@ -482,19 +375,16 @@ export default function CVManualForm({ profile, onSuccess }: Props) {
           </Card>
         ))}
       </div>
-      <div style={{ marginBottom: '20px' }}>
-        <AddBtn
-          onClick={() => setProjects((prev) => [...prev, { name: "", description: "", url: "", date_range: "" }])}
-          label="Add Project"
-        />
+      <div className="mb-5">
+        <AddBtn onClick={() => setProjects((prev) => [...prev, { name: "", description: "", url: "", date_range: "" }])} label="Add Project" />
       </div>
 
       {/* Work Experience */}
       <SectionHeader>Work Experience</SectionHeader>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
+      <div className="flex flex-col gap-2.5 mb-3">
         {workExp.map((exp, i) => (
           <Card key={i} onRemove={() => setWorkExp((prev) => prev.filter((_, j) => j !== i))}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', paddingRight: '28px' }}>
+            <div className="grid grid-cols-2 gap-2.5 pr-7">
               <LabeledInput label="Company" value={exp.company} onChange={(v) => updateExp(i, "company", v)} placeholder="Citi Handlowy" />
               <LabeledInput label="Date Range" value={exp.date_range} onChange={(v) => updateExp(i, "date_range", v)} placeholder="Jan 2025 – Aug 2025" />
             </div>
@@ -503,19 +393,16 @@ export default function CVManualForm({ profile, onSuccess }: Props) {
           </Card>
         ))}
       </div>
-      <div style={{ marginBottom: '20px' }}>
-        <AddBtn
-          onClick={() => setWorkExp((prev) => [...prev, { company: "", role: "", date_range: "", bullets: [""] }])}
-          label="Add Experience"
-        />
+      <div className="mb-5">
+        <AddBtn onClick={() => setWorkExp((prev) => [...prev, { company: "", role: "", date_range: "", bullets: [""] }])} label="Add Experience" />
       </div>
 
       {/* Education */}
       <SectionHeader>Education</SectionHeader>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
+      <div className="flex flex-col gap-2.5 mb-3">
         {education.map((edu, i) => (
           <Card key={i} onRemove={() => setEducation((prev) => prev.filter((_, j) => j !== i))}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', paddingRight: '28px' }}>
+            <div className="grid grid-cols-2 gap-2.5 pr-7">
               <LabeledInput label="Institution" value={edu.institution} onChange={(v) => updateEdu(i, "institution", v)} placeholder="Collegium Da Vinci Poznań" />
               <LabeledInput label="Years" value={edu.years} onChange={(v) => updateEdu(i, "years", v)} placeholder="2023 – present" />
             </div>
@@ -523,80 +410,62 @@ export default function CVManualForm({ profile, onSuccess }: Props) {
           </Card>
         ))}
       </div>
-      <div style={{ marginBottom: '20px' }}>
-        <AddBtn
-          onClick={() => setEducation((prev) => [...prev, { institution: "", degree: "", years: "" }])}
-          label="Add Education"
-        />
+      <div className="mb-5">
+        <AddBtn onClick={() => setEducation((prev) => [...prev, { institution: "", degree: "", years: "" }])} label="Add Education" />
       </div>
 
       {/* Languages */}
       <SectionHeader>Languages</SectionHeader>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+      <div className="flex flex-col gap-2 mb-3">
         {languages.map((lang, i) => (
-          <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
-            <div style={{ flex: 2 }}>
+          <div key={i} className="flex gap-2.5 items-end">
+            <div className="flex-[2]">
               <LabeledInput label="Language" value={lang.language} onChange={(v) => updateLang(i, "language", v)} placeholder="English" />
             </div>
-            <div style={{ flex: 1 }}>
+            <div className="flex-1">
               <LabeledInput label="Level" value={lang.level} onChange={(v) => updateLang(i, "level", v)} placeholder="C1" />
             </div>
             <RemoveBtn onClick={() => setLanguages((prev) => prev.filter((_, j) => j !== i))} />
           </div>
         ))}
       </div>
-      <div style={{ marginBottom: '20px' }}>
-        <AddBtn
-          onClick={() => setLanguages((prev) => [...prev, { language: "", level: "" }])}
-          label="Add Language"
-        />
+      <div className="mb-5">
+        <AddBtn onClick={() => setLanguages((prev) => [...prev, { language: "", level: "" }])} label="Add Language" />
       </div>
 
       {/* Certifications */}
       <SectionHeader>Certifications</SectionHeader>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+      <div className="flex flex-col gap-2 mb-3">
         {certifications.map((cert, i) => (
-          <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
-            <div style={{ flex: 3 }}>
+          <div key={i} className="flex gap-2.5 items-end">
+            <div className="flex-[3]">
               <LabeledInput label="Name" value={cert.name} onChange={(v) => updateCert(i, "name", v)} placeholder="AWS Academy Graduate - Data Engineering" />
             </div>
-            <div style={{ flex: 1 }}>
+            <div className="flex-1">
               <LabeledInput label="Year" value={cert.year} onChange={(v) => updateCert(i, "year", v)} placeholder="2025" />
             </div>
             <RemoveBtn onClick={() => setCertifications((prev) => prev.filter((_, j) => j !== i))} />
           </div>
         ))}
       </div>
-      <div style={{ marginBottom: '32px' }}>
-        <AddBtn
-          onClick={() => setCertifications((prev) => [...prev, { name: "", url: "", year: "" }])}
-          label="Add Certification"
-        />
+      <div className="mb-8">
+        <AddBtn onClick={() => setCertifications((prev) => [...prev, { name: "", url: "", year: "" }])} label="Add Certification" />
       </div>
 
       {/* Submit */}
       {error && (
-        <p style={{ fontFamily: F.body, fontSize: '13px', color: '#F87171', margin: '0 0 12px' }}>{error}</p>
+        <p className="font-body text-[13px] text-[#F87171] mb-3">{error}</p>
       )}
       <button
         type="button"
         onClick={handleSubmit}
         disabled={isPending}
+        className="self-start py-[11px] px-7 rounded-md font-display text-[13px] font-bold tracking-[0.12em] uppercase cursor-pointer disabled:cursor-not-allowed border transition-all duration-200"
         style={{
-          alignSelf: 'flex-start',
-          padding: '11px 28px',
           background: isPending ? '#1E1E20' : 'linear-gradient(135deg, #FF5722, #FF8C42)',
           border: isPending ? '1px solid #272729' : '1px solid transparent',
-          borderRadius: '6px',
-          cursor: isPending ? 'not-allowed' : 'pointer',
-          fontFamily: F.display,
-          fontSize: '13px',
-          fontWeight: 700,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
           color: isPending ? '#3A3A3E' : '#fff',
           boxShadow: isPending ? 'none' : '0 0 10px rgba(255,87,34,0.18)',
-          transition: 'all 0.2s ease',
         }}
       >
         {isPending ? 'Creating...' : 'Create CV'}

@@ -13,50 +13,59 @@ import {
   type MasterCV,
   type UserProfile,
 } from "@/lib/api";
+import CVListRow from "@/components/CVListRow";
 
 const CVManualForm = dynamic(() => import("@/components/CVManualForm"), {
   ssr: false,
   loading: () => (
-    <p style={{ fontFamily: '"IBM Plex Sans", sans-serif', fontSize: "13px", color: "#5C5C70", padding: "32px 0" }}>
+    <p className="font-body text-[13px] text-[#5C5C70] py-8">
       Loading form...
     </p>
   ),
 });
 
-const F = {
-  display: '"Barlow Condensed", sans-serif',
-  body: '"IBM Plex Sans", sans-serif',
-  mono: '"IBM Plex Mono", "Courier New", monospace',
-};
-
-const inputStyle: React.CSSProperties = {
-  background: '#161618',
-  border: '1px solid #222224',
-  borderRadius: '6px',
-  padding: '10px 14px',
-  fontFamily: F.body,
-  fontSize: '13px',
-  color: '#E2E2E4',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-};
-
 type Tab = "import" | "manual";
 type Section = "cvs" | "profile";
 
-// ── Profile helpers ───────────────────────────────────────────────────────────
+const inputClass = "forge-input bg-forge-surface border border-[#222224] rounded-md py-2.5 px-3.5 font-body text-[13px] text-forge-text outline-none w-full box-border";
+const labelClass = "font-display text-[11px] font-bold tracking-[0.14em] uppercase text-[#9A9AA4] mb-1.5 block";
 
-function Field({ label, value, onChange, placeholder, isLink }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; isLink?: boolean }) {
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  isLink,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  isLink?: boolean;
+}) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-      <label style={{ fontFamily: F.display, fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: '#9A9AA4', marginBottom: '6px', display: 'block' }}>{label}</label>
-      <div style={{ position: 'relative' }}>
-        {isLink && <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#FF5722', fontFamily: F.mono, fontSize: '12px', pointerEvents: 'none' }}>↗</span>}
-        <input className="forge-input" style={{ ...inputStyle, paddingLeft: isLink ? '30px' : '14px' }} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+    <div className="flex flex-col gap-0">
+      <label className={labelClass}>{label}</label>
+      <div className="relative">
+        {isLink && (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-forge-orange font-mono text-xs pointer-events-none">↗</span>
+        )}
+        <input
+          className={`${inputClass} ${isLink ? 'pl-[30px]' : ''}`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+        />
       </div>
       {isLink && value && (
-        <a href={value} target="_blank" rel="noopener noreferrer" style={{ fontFamily: F.body, fontSize: '11px', color: '#FF5722', marginTop: '4px', paddingLeft: '2px', textDecoration: 'none', opacity: 0.8 }}>{value}</a>
+        <a
+          href={value}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-body text-[11px] text-forge-orange mt-1 pl-0.5 no-underline opacity-80"
+        >
+          {value}
+        </a>
       )}
     </div>
   );
@@ -64,23 +73,19 @@ function Field({ label, value, onChange, placeholder, isLink }: { label: string;
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ borderTop: '1px solid #1E1E20', paddingTop: '20px', fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' as const, color: '#5C5C70' }}>
+    <div className="border-t border-forge-elevated pt-5 font-display text-[10px] font-bold tracking-[0.18em] uppercase text-[#5C5C70]">
       {children}
     </div>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function CVManagerPage() {
   const [section, setSection] = useState<Section>("cvs");
 
-  // Remote data via SWR
   const { data: cvs = [], mutate: mutateCVs } = useSWR<MasterCV[]>("masterCVs", fetchMasterCVs);
   const { data: profile, mutate: mutateProfile } = useSWR<UserProfile>("profile", getProfile, { revalidateOnFocus: false });
   const profileLoaded = profile !== undefined;
 
-  // Local CV state
   const [selected, setSelected] = useState<MasterCV | null>(null);
   const [tab, setTab] = useState<Tab>("import");
   const [title, setTitle] = useState("");
@@ -94,13 +99,11 @@ export default function CVManagerPage() {
   const [isPending, startTransition] = useTransition();
   const [importBtnHovered, setImportBtnHovered] = useState(false);
 
-  // Local profile form state
   const [profileForm, setProfileForm] = useState({ name: "", job_title: "", email: "", phone: "", location: "", github_url: "", portfolio_url: "" });
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profilePending, startProfileTransition] = useTransition();
 
-  // Sync local form state from profile on first load (one-time)
   const profileSynced = useRef(false);
   useEffect(() => {
     if (!profile || profileSynced.current) return;
@@ -125,8 +128,6 @@ export default function CVManagerPage() {
       setEditLinks(false);
     }
   }, [selected?.id]);
-
-  // ── CV handlers ──
 
   function handleDelete(cv: MasterCV) {
     if (!confirm(`Delete "${cv.title}"?`)) return;
@@ -175,8 +176,6 @@ export default function CVManagerPage() {
     });
   }
 
-  // ── Profile handlers ──
-
   function setProfileField(field: keyof typeof profileForm) {
     return (v: string) => setProfileForm((prev) => ({ ...prev, [field]: v }));
   }
@@ -207,34 +206,21 @@ export default function CVManagerPage() {
   const importDisabled = isPending || !title.trim() || !rawText.trim();
 
   return (
-    <main style={{ flex: 1, display: 'flex', minHeight: 0, background: '#0D0D0E' }}>
+    <main className="flex-1 flex min-h-0 bg-forge-base">
 
-      {/* ── Left sidebar ── */}
-      <aside
-        className="forge-scroll"
-        style={{ width: '240px', flexShrink: 0, borderRight: '1px solid #1E1E20', padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }}
-      >
+      {/* Left sidebar */}
+      <aside className="forge-scroll w-[240px] shrink-0 border-r border-forge-elevated py-4 px-3 flex flex-col gap-1 overflow-y-auto">
         {/* Section nav */}
-        <div style={{ display: 'flex', gap: '2px', marginBottom: '12px' }}>
+        <div className="flex gap-0.5 mb-3">
           {(['cvs', 'profile'] as Section[]).map((s) => (
             <button
               key={s}
               onClick={() => setSection(s)}
-              style={{
-                flex: 1,
-                padding: '6px 4px',
-                background: section === s ? '#1E1E20' : 'transparent',
-                border: `1px solid ${section === s ? '#2A2A2C' : 'transparent'}`,
-                borderRadius: '5px',
-                fontFamily: F.display,
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.10em',
-                textTransform: 'uppercase' as const,
-                color: section === s ? '#E2E2E4' : '#5C5C66',
-                cursor: 'pointer',
-                transition: 'all 0.18s ease',
-              }}
+              className={`flex-1 py-1.5 px-1 rounded-[5px] font-display text-[10px] font-bold tracking-[0.10em] uppercase cursor-pointer transition-all duration-[180ms] border ${
+                section === s
+                  ? 'bg-forge-elevated border-[#2A2A2C] text-forge-text'
+                  : 'bg-transparent border-transparent text-[#5C5C66]'
+              }`}
             >
               {s === 'cvs' ? 'CVs' : 'Profile'}
             </button>
@@ -243,40 +229,44 @@ export default function CVManagerPage() {
 
         {section === 'cvs' && (
           <>
-            <p style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C4C4CC', marginBottom: '6px', paddingLeft: '2px' }}>
+            <p className="font-display text-[10px] font-bold tracking-[0.16em] uppercase text-[#C4C4CC] mb-1.5 pl-0.5">
               Saved CVs
             </p>
             {cvs.length === 0 && (
-              <p style={{ fontFamily: F.body, fontSize: '13px', color: '#5C5C70', paddingLeft: '2px' }}>No CVs yet.</p>
+              <p className="font-body text-[13px] text-[#5C5C70] pl-0.5">No CVs yet.</p>
             )}
             {cvs.map((cv) => (
-              <CVListRow key={cv.id} cv={cv} isSelected={selected?.id === cv.id} onSelect={() => setSelected(cv)} onDelete={() => handleDelete(cv)} disabled={isPending} />
+              <CVListRow
+                key={cv.id}
+                cv={cv}
+                isSelected={selected?.id === cv.id}
+                onSelect={() => setSelected(cv)}
+                onDelete={() => handleDelete(cv)}
+                disabled={isPending}
+              />
             ))}
           </>
         )}
       </aside>
 
-      {/* ── Main content ── */}
-      <div
-        className="forge-scroll"
-        style={{ flex: 1, padding: '28px 36px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}
-      >
+      {/* Main content */}
+      <div className="forge-scroll flex-1 py-7 px-9 flex flex-col gap-4 overflow-y-auto">
 
-        {/* ── Profile panel ── */}
+        {/* Profile panel */}
         {section === 'profile' && (
           <>
             <div>
-              <h1 style={{ fontFamily: F.display, fontSize: '26px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#E2E2E4', margin: 0, lineHeight: 1 }}>
-                PROFILE<span style={{ color: '#FF5722' }}> /</span> SETTINGS
+              <h1 className="font-display text-[26px] font-extrabold tracking-[0.08em] uppercase text-forge-text m-0 leading-none">
+                PROFILE<span className="text-forge-orange"> /</span> SETTINGS
               </h1>
-              <p style={{ fontFamily: F.body, fontSize: '13px', color: '#A8A8B4', marginTop: '6px' }}>
+              <p className="font-body text-[13px] text-[#A8A8B4] mt-1.5">
                 Global defaults auto-filled when creating a new CV. Links appear in every tailored PDF.
               </p>
             </div>
             {!profileLoaded ? (
-              <p style={{ fontFamily: F.body, fontSize: '13px', color: '#9A9AA4' }}>Loading...</p>
+              <p className="font-body text-[13px] text-[#9A9AA4]">Loading...</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '520px' }}>
+              <div className="flex flex-col gap-5 max-w-[520px]">
                 <SectionLabel>Identity</SectionLabel>
                 <Field label="Full Name" value={profileForm.name} onChange={setProfileField("name")} placeholder="Szymon Nawrocki" />
                 <Field label="Job Title" value={profileForm.job_title} onChange={setProfileField("job_title")} placeholder="Web Developer" />
@@ -287,24 +277,18 @@ export default function CVManagerPage() {
                 <SectionLabel>Links</SectionLabel>
                 <Field label="Portfolio URL" value={profileForm.portfolio_url} onChange={setProfileField("portfolio_url")} placeholder="https://yoursite.com" isLink />
                 <Field label="GitHub URL" value={profileForm.github_url} onChange={setProfileField("github_url")} placeholder="https://github.com/username" isLink />
-                {profileError && <p style={{ fontFamily: F.body, fontSize: '13px', color: '#F87171', margin: 0 }}>{profileError}</p>}
+                {profileError && <p className="font-body text-[13px] text-[#F87171] m-0">{profileError}</p>}
                 <button
                   onClick={handleSaveProfile}
                   disabled={profilePending}
+                  className="self-start py-2.5 px-7 rounded-md font-display text-[13px] font-bold tracking-[0.12em] uppercase cursor-pointer disabled:cursor-not-allowed border transition-all duration-200"
                   style={{
-                    alignSelf: 'flex-start',
-                    padding: '10px 28px',
-                    background: profileSaved ? 'linear-gradient(135deg, #22c55e, #16a34a)' : profilePending ? '#1E1E20' : 'linear-gradient(135deg, #FF5722, #FF8C42)',
+                    background: profileSaved
+                      ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                      : profilePending ? '#1E1E20'
+                      : 'linear-gradient(135deg, #FF5722, #FF8C42)',
                     border: profilePending ? '1px solid #272729' : '1px solid transparent',
-                    borderRadius: '6px',
-                    cursor: profilePending ? 'not-allowed' : 'pointer',
-                    fontFamily: F.display,
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase' as const,
                     color: profilePending ? '#3A3A3E' : '#fff',
-                    transition: 'all 0.2s ease',
                   }}
                 >
                   {profilePending ? 'Saving...' : profileSaved ? 'Saved' : 'Save Profile'}
@@ -314,64 +298,68 @@ export default function CVManagerPage() {
           </>
         )}
 
-        {/* ── CVs panel ── */}
+        {/* CVs panel */}
         {section === 'cvs' && (
           selected ? (
-            /* ── Detail view ── */
+            /* Detail view */
             <>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                <h1 style={{ fontFamily: F.display, fontSize: '26px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#E2E2E4', margin: 0 }}>
+              <div className="flex items-center justify-between gap-3">
+                <h1 className="font-display text-[26px] font-extrabold tracking-[0.06em] uppercase text-forge-text m-0">
                   {selected.title}
                 </h1>
                 <button
                   onClick={() => setSelected(null)}
-                  style={{ padding: '7px 14px', background: 'transparent', border: '1px solid #272729', borderRadius: '5px', fontFamily: F.display, fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#C4C4CC', cursor: 'pointer', transition: 'all 0.2s ease' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#E2E2E4'; e.currentTarget.style.borderColor = '#3A3A3E'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = '#5C5C66'; e.currentTarget.style.borderColor = '#272729'; }}
+                  className="py-[7px] px-3.5 bg-transparent border border-forge-border rounded-[5px] font-display text-xs font-bold tracking-[0.1em] uppercase text-[#C4C4CC] cursor-pointer transition-all duration-200 hover:text-forge-text hover:border-[#3A3A3E]"
                 >
                   + New CV
                 </button>
               </div>
 
               {/* Link editor */}
-              <div style={{ background: '#161618', border: '1px solid #1E1E20', borderRadius: '8px', padding: '14px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: editLinks ? '12px' : '0' }}>
-                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <div className="bg-forge-surface border border-forge-elevated rounded-lg py-3.5 px-4">
+                <div className={`flex items-center justify-between ${editLinks ? 'mb-3' : ''}`}>
+                  <div className="flex gap-4 items-center">
                     {selected.portfolio_url ? (
-                      <a href={selected.portfolio_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: F.body, fontSize: '12px', color: '#FF5722', textDecoration: 'none' }}>↗ Portfolio</a>
+                      <a href={selected.portfolio_url} target="_blank" rel="noopener noreferrer" className="font-body text-xs text-forge-orange no-underline">↗ Portfolio</a>
                     ) : (
-                      <span style={{ fontFamily: F.body, fontSize: '12px', color: '#5C5C70' }}>No portfolio</span>
+                      <span className="font-body text-xs text-[#5C5C70]">No portfolio</span>
                     )}
                     {selected.github_url ? (
-                      <a href={selected.github_url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: F.body, fontSize: '12px', color: '#FF5722', textDecoration: 'none' }}>↗ GitHub</a>
+                      <a href={selected.github_url} target="_blank" rel="noopener noreferrer" className="font-body text-xs text-forge-orange no-underline">↗ GitHub</a>
                     ) : (
-                      <span style={{ fontFamily: F.body, fontSize: '12px', color: '#5C5C70' }}>No GitHub</span>
+                      <span className="font-body text-xs text-[#5C5C70]">No GitHub</span>
                     )}
                   </div>
-                  <button onClick={() => setEditLinks(!editLinks)} style={{ padding: '4px 10px', background: 'transparent', border: '1px solid #272729', borderRadius: '4px', fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#C4C4CC', cursor: 'pointer' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = '#E2E2E4'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#5C5C66'; }}
+                  <button
+                    onClick={() => setEditLinks(!editLinks)}
+                    className="py-1 px-2.5 bg-transparent border border-forge-border rounded rounded-[4px] font-display text-[10px] font-bold tracking-[0.1em] uppercase text-[#C4C4CC] cursor-pointer hover:text-forge-text transition-colors"
                   >
                     {editLinks ? 'Cancel' : 'Edit Links'}
                   </button>
                 </div>
                 {editLinks && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div className="flex flex-col gap-2.5">
+                    <div className="grid grid-cols-2 gap-2.5">
                       <div>
-                        <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C4C4CC', display: 'block', marginBottom: '5px' }}>Portfolio URL</label>
-                        <input className="forge-input" style={inputStyle} value={linkPortfolio} onChange={(e) => setLinkPortfolio(e.target.value)} placeholder="https://yoursite.com" />
+                        <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-[#C4C4CC] block mb-[5px]">Portfolio URL</label>
+                        <input className={inputClass} value={linkPortfolio} onChange={(e) => setLinkPortfolio(e.target.value)} placeholder="https://yoursite.com" />
                       </div>
                       <div>
-                        <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C4C4CC', display: 'block', marginBottom: '5px' }}>GitHub URL</label>
-                        <input className="forge-input" style={inputStyle} value={linkGithub} onChange={(e) => setLinkGithub(e.target.value)} placeholder="https://github.com/username" />
+                        <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-[#C4C4CC] block mb-[5px]">GitHub URL</label>
+                        <input className={inputClass} value={linkGithub} onChange={(e) => setLinkGithub(e.target.value)} placeholder="https://github.com/username" />
                       </div>
                     </div>
-                    {error && <p style={{ fontFamily: F.body, fontSize: '12px', color: '#F87171', margin: 0 }}>{error}</p>}
+                    {error && <p className="font-body text-xs text-[#F87171] m-0">{error}</p>}
                     <button
                       onClick={handleSaveLinks}
                       disabled={isPending}
-                      style={{ alignSelf: 'flex-start', padding: '7px 18px', background: isPending ? '#1E1E20' : 'linear-gradient(135deg, #FF5722, #FF8C42)', border: isPending ? '1px solid #272729' : '1px solid transparent', borderRadius: '5px', cursor: isPending ? 'not-allowed' : 'pointer', fontFamily: F.display, fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: isPending ? '#3A3A3E' : '#fff' }}
+                      className="self-start py-[7px] px-[18px] rounded-[5px] font-display text-[11px] font-bold tracking-[0.1em] uppercase border transition-colors disabled:cursor-not-allowed"
+                      style={{
+                        background: isPending ? '#1E1E20' : 'linear-gradient(135deg, #FF5722, #FF8C42)',
+                        border: isPending ? '1px solid #272729' : '1px solid transparent',
+                        color: isPending ? '#3A3A3E' : '#fff',
+                        cursor: isPending ? 'not-allowed' : 'pointer',
+                      }}
                     >
                       {isPending ? 'Saving...' : 'Save Links'}
                     </button>
@@ -379,23 +367,31 @@ export default function CVManagerPage() {
                 )}
               </div>
 
-              <pre style={{ background: '#161618', border: '1px solid #222224', borderRadius: '8px', padding: '18px 20px', fontFamily: F.mono, fontSize: '12px', color: '#C4C4CC', whiteSpace: 'pre-wrap', overflowY: 'auto', maxHeight: '55vh', lineHeight: 1.75, margin: 0 }}>
+              <pre className="bg-forge-surface border border-[#222224] rounded-lg py-[18px] px-5 font-mono text-xs text-[#C4C4CC] whitespace-pre-wrap overflow-y-auto max-h-[55vh] leading-[1.75] m-0">
                 {selected.content_markdown}
               </pre>
             </>
           ) : (
-            /* ── Create / Import form ── */
+            /* Create / Import form */
             <>
               <div>
-                <h1 style={{ fontFamily: F.display, fontSize: '26px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#E2E2E4', margin: 0 }}>
-                  NEW<span style={{ color: '#FF5722' }}> /</span> CV
+                <h1 className="font-display text-[26px] font-extrabold tracking-[0.08em] uppercase text-forge-text m-0">
+                  NEW<span className="text-forge-orange"> /</span> CV
                 </h1>
               </div>
 
               {/* Tab bar */}
-              <div style={{ display: 'flex', gap: '2px', borderBottom: '1px solid #1E1E20', marginBottom: '4px' }}>
+              <div className="flex gap-0.5 border-b border-forge-elevated mb-1">
                 {(['import', 'manual'] as Tab[]).map((t) => (
-                  <button key={t} onClick={() => { setTab(t); setError(null); }} style={{ padding: '8px 20px', background: 'transparent', border: 'none', borderBottom: tab === t ? '2px solid #FF5722' : '2px solid transparent', marginBottom: '-1px', fontFamily: F.display, fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: tab === t ? '#E2E2E4' : '#5C5C66', cursor: 'pointer', transition: 'color 0.18s ease' }}>
+                  <button
+                    key={t}
+                    onClick={() => { setTab(t); setError(null); }}
+                    className={`py-2 px-5 bg-transparent border-none font-display text-xs font-bold tracking-[0.12em] uppercase cursor-pointer transition-colors duration-[180ms] -mb-px ${
+                      tab === t
+                        ? 'text-forge-text border-b-2 border-b-forge-orange'
+                        : 'text-[#5C5C66] border-b-2 border-b-transparent'
+                    }`}
+                  >
                     {t === 'import' ? 'Import Text' : 'Fill In Manually'}
                   </button>
                 ))}
@@ -403,42 +399,49 @@ export default function CVManagerPage() {
 
               {tab === 'import' ? (
                 <>
-                  <p style={{ fontFamily: F.body, fontSize: '13px', color: '#A8A8B4', margin: 0 }}>
+                  <p className="font-body text-[13px] text-[#A8A8B4] m-0">
                     Paste raw CV text — AI will clean and structure it into Markdown.
                   </p>
-                  <input className="forge-input" style={inputStyle} placeholder="CV title (e.g. My Master CV)" value={title} onChange={(e) => setTitle(e.target.value)} />
-                  <textarea className="forge-input" style={{ ...inputStyle, fontFamily: F.mono, fontSize: '12px', color: '#C4C4CC', resize: 'vertical', lineHeight: 1.75, minHeight: '280px' }} placeholder="Paste raw CV text here..." rows={14} value={rawText} onChange={(e) => setRawText(e.target.value)} />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <input
+                    className={inputClass}
+                    placeholder="CV title (e.g. My Master CV)"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                  <textarea
+                    className={`${inputClass} font-mono text-xs text-[#C4C4CC] resize-y leading-[1.75] min-h-[280px]`}
+                    placeholder="Paste raw CV text here..."
+                    rows={14}
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                  />
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C4C4CC', display: 'block', marginBottom: '5px' }}>Portfolio URL</label>
-                      <input className="forge-input" style={inputStyle} value={importPortfolio} onChange={(e) => setImportPortfolio(e.target.value)} placeholder="https://yoursite.com" />
+                      <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-[#C4C4CC] block mb-[5px]">Portfolio URL</label>
+                      <input className={inputClass} value={importPortfolio} onChange={(e) => setImportPortfolio(e.target.value)} placeholder="https://yoursite.com" />
                     </div>
                     <div>
-                      <label style={{ fontFamily: F.display, fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C4C4CC', display: 'block', marginBottom: '5px' }}>GitHub URL</label>
-                      <input className="forge-input" style={inputStyle} value={importGithub} onChange={(e) => setImportGithub(e.target.value)} placeholder="https://github.com/username" />
+                      <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-[#C4C4CC] block mb-[5px]">GitHub URL</label>
+                      <input className={inputClass} value={importGithub} onChange={(e) => setImportGithub(e.target.value)} placeholder="https://github.com/username" />
                     </div>
                   </div>
-                  {error && <p style={{ fontFamily: F.body, fontSize: '13px', color: '#F87171', margin: 0 }}>{error}</p>}
+                  {error && <p className="font-body text-[13px] text-[#F87171] m-0">{error}</p>}
                   <button
                     onClick={handleImport}
                     disabled={importDisabled}
                     onMouseEnter={() => setImportBtnHovered(true)}
                     onMouseLeave={() => setImportBtnHovered(false)}
+                    className="self-start py-2.5 px-6 rounded-md font-display text-[13px] font-bold tracking-[0.12em] uppercase border transition-all duration-200 disabled:cursor-not-allowed"
                     style={{
-                      alignSelf: 'flex-start',
-                      padding: '10px 24px',
-                      background: importDisabled ? '#1E1E20' : importBtnHovered ? 'linear-gradient(135deg, #FF8C42, #FFC947)' : 'linear-gradient(135deg, #FF5722, #FF8C42)',
-                      border: `1px solid ${importDisabled ? '#272729' : 'transparent'}`,
-                      borderRadius: '6px',
-                      cursor: importDisabled ? 'not-allowed' : 'pointer',
-                      fontFamily: F.display,
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      letterSpacing: '0.12em',
-                      textTransform: 'uppercase',
+                      background: importDisabled ? '#1E1E20'
+                        : importBtnHovered ? 'linear-gradient(135deg, #FF8C42, #FFC947)'
+                        : 'linear-gradient(135deg, #FF5722, #FF8C42)',
+                      border: importDisabled ? '1px solid #272729' : '1px solid transparent',
                       color: importDisabled ? '#3A3A3E' : importBtnHovered ? '#0D0D0E' : '#fff',
-                      boxShadow: (!importDisabled && importBtnHovered) ? '0 0 28px rgba(255,200,70,0.28), 0 0 12px rgba(255,140,66,0.40)' : (!importDisabled) ? '0 0 10px rgba(255,87,34,0.18)' : 'none',
-                      transition: 'all 0.20s cubic-bezier(0.25,0.46,0.45,0.94)',
+                      cursor: importDisabled ? 'not-allowed' : 'pointer',
+                      boxShadow: (!importDisabled && importBtnHovered)
+                        ? '0 0 28px rgba(255,200,70,0.28), 0 0 12px rgba(255,140,66,0.40)'
+                        : !importDisabled ? '0 0 10px rgba(255,87,34,0.18)' : 'none',
                     }}
                   >
                     {isPending ? 'Importing...' : 'Import & Clean'}
@@ -452,41 +455,5 @@ export default function CVManagerPage() {
         )}
       </div>
     </main>
-  );
-}
-
-// ── CV list row ───────────────────────────────────────────────────────────────
-
-function CVListRow({ cv, isSelected, onSelect, onDelete, disabled }: { cv: MasterCV; isSelected: boolean; onSelect: () => void; onDelete: () => void; disabled: boolean }) {
-  const [hovered, setHovered] = useState(false);
-  const [delHovered, setDelHovered] = useState(false);
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-      <button
-        onClick={onSelect}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          flex: 1, textAlign: 'left', padding: '9px 12px',
-          background: isSelected ? 'linear-gradient(135deg, rgba(255,87,34,0.08), rgba(22,22,24,0.95))' : hovered ? 'rgba(255,255,255,0.025)' : 'transparent',
-          border: `1px solid ${isSelected ? 'rgba(255,87,34,0.32)' : hovered ? '#2A2A2C' : 'transparent'}`,
-          borderRadius: '6px', fontFamily: '"IBM Plex Sans", sans-serif', fontSize: '13px', fontWeight: isSelected ? 500 : 400,
-          color: isSelected ? '#E2E2E4' : '#9A9AA4', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'all 0.18s ease', minWidth: 0,
-        }}
-      >
-        {cv.title}
-      </button>
-      <button
-        onClick={onDelete}
-        disabled={disabled}
-        onMouseEnter={() => setDelHovered(true)}
-        onMouseLeave={() => setDelHovered(false)}
-        style={{ padding: '8px 9px', background: 'transparent', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', color: delHovered ? '#F87171' : '#5C5C66', fontSize: '17px', lineHeight: 1, flexShrink: 0, opacity: disabled ? 0.4 : 1, transition: 'color 0.18s ease' }}
-        title="Delete"
-      >
-        ×
-      </button>
-    </div>
   );
 }

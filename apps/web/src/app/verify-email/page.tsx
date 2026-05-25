@@ -30,47 +30,24 @@ function VerifyEmailContent() {
   }, [searchParams]);
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "#0D0D0E",
-    }}>
-      <div style={{
-        width: "100%",
-        maxWidth: "400px",
-        padding: "40px",
-        background: "#111113",
-        border: "1px solid #1E1E20",
-        borderRadius: "12px",
-        textAlign: "center",
-      }}>
+    <div className="min-h-screen flex items-center justify-center bg-forge-base">
+      <div className="w-full max-w-[400px] p-10 bg-[#111113] border border-forge-elevated rounded-xl text-center">
         {status === "loading" && (
           <>
-            <div style={{ fontSize: "40px", marginBottom: "16px" }}>⏳</div>
-            <h2 style={{ color: "#E2E2E4", fontSize: "20px" }}>Verifying your email…</h2>
+            <div className="text-[40px] mb-4">⏳</div>
+            <h2 className="text-forge-text text-xl">Verifying your email…</h2>
           </>
         )}
         {status === "success" && (
           <>
-            <div style={{ fontSize: "40px", marginBottom: "16px" }}>✅</div>
-            <h2 style={{ color: "#E2E2E4", fontSize: "20px", marginBottom: "12px" }}>Email verified!</h2>
-            <p style={{ color: "#888", fontSize: "14px", marginBottom: "24px" }}>
+            <div className="text-[40px] mb-4">✅</div>
+            <h2 className="text-forge-text text-xl mb-3">Email verified!</h2>
+            <p className="text-[#888] text-sm mb-6">
               Your account is active. You can now sign in.
             </p>
             <a
               href="/login"
-              style={{
-                display: "inline-block",
-                padding: "10px 24px",
-                background: "#FF5722",
-                borderRadius: "6px",
-                color: "#fff",
-                fontSize: "14px",
-                fontWeight: 600,
-                textDecoration: "none",
-              }}
+              className="inline-block py-2.5 px-6 bg-forge-orange rounded-md text-white text-sm font-semibold no-underline"
             >
               Sign in
             </a>
@@ -78,10 +55,10 @@ function VerifyEmailContent() {
         )}
         {status === "error" && (
           <>
-            <div style={{ fontSize: "40px", marginBottom: "16px" }}>❌</div>
-            <h2 style={{ color: "#E2E2E4", fontSize: "20px", marginBottom: "12px" }}>Verification failed</h2>
-            <p style={{ color: "#888", fontSize: "14px", marginBottom: "24px" }}>{errorMsg}</p>
-            <a href="/login" style={{ color: "#FF5722", fontSize: "13px", textDecoration: "none" }}>
+            <div className="text-[40px] mb-4">❌</div>
+            <h2 className="text-forge-text text-xl mb-3">Verification failed</h2>
+            <p className="text-[#888] text-sm mb-6">{errorMsg}</p>
+            <a href="/login" className="text-forge-orange text-[13px] no-underline">
               Back to sign in
             </a>
           </>

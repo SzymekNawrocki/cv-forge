@@ -28,34 +28,18 @@ export default function UserMenu() {
   if (!user) return (
     <a
       href="/login"
-      style={{
-        padding: "5px 12px",
-        background: "transparent",
-        border: "1px solid #2A2A2E",
-        borderRadius: "5px",
-        color: "#999",
-        fontSize: "12px",
-        textDecoration: "none",
-      }}
+      className="py-[5px] px-3 bg-transparent border border-forge-border rounded-[5px] text-[#999] text-xs no-underline hover:text-forge-text hover:border-[#3A3A3E] transition-colors"
     >
       Sign in
     </a>
   );
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-      <span style={{ fontSize: "12px", color: "#888" }}>{user.email}</span>
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-forge-muted">{user.email}</span>
       <button
         onClick={handleLogout}
-        style={{
-          padding: "5px 12px",
-          background: "transparent",
-          border: "1px solid #2A2A2E",
-          borderRadius: "5px",
-          color: "#999",
-          fontSize: "12px",
-          cursor: "pointer",
-        }}
+        className="py-[5px] px-3 bg-transparent border border-forge-border rounded-[5px] text-[#999] text-xs cursor-pointer hover:text-forge-text hover:border-[#3A3A3E] transition-colors"
       >
         Sign out
       </button>

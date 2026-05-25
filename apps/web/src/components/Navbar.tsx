@@ -11,36 +11,23 @@ export default function Navbar() {
   if (AUTH_PATHS.some((p) => pathname.startsWith(p))) return null;
 
   return (
-    <nav style={{
-      position: "sticky",
-      top: 0,
-      zIndex: 50,
-      height: "52px",
-      background: "rgba(13, 13, 14, 0.90)",
-      backdropFilter: "blur(16px) saturate(1.2)",
-      WebkitBackdropFilter: "blur(16px) saturate(1.2)",
-      borderBottom: "1px solid #1E1E20",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "0 28px",
-    }}>
-      <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+    <nav className="sticky top-0 z-50 h-[52px] bg-[rgba(13,13,14,0.90)] backdrop-blur-[16px] saturate-120 border-b border-forge-elevated flex items-center justify-between px-7">
+      <a href="/" className="no-underline flex items-center">
         <Image
           src="/cv-forge-logo.png"
           alt="CV Forge"
           height={32}
           width={120}
-          style={{ objectFit: "contain" }}
+          className="object-contain"
           priority
         />
       </a>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+      <div className="flex items-center gap-0.5">
         <a href="/cv-manager" className="forge-nav-link">CV Manager</a>
         <a href="/forge" className="forge-nav-link">Forge</a>
         <a href="/settings" className="forge-nav-link">Settings</a>
-        <div style={{ marginLeft: "16px" }}>
+        <div className="ml-4">
           <UserMenu />
         </div>
       </div>

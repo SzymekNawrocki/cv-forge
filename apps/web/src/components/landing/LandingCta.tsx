@@ -1,89 +1,37 @@
 export function LandingCta() {
   return (
-    <section
-      style={{
-        padding: '100px 24px',
-        borderTop: '1px solid #1E1E20',
-        background: '#161618',
-        textAlign: 'center',
-      }}
-    >
-      <div style={{ maxWidth: '640px', margin: '0 auto' }}>
+    <section className="py-[100px] px-6 border-t border-forge-elevated bg-forge-surface text-center">
+      <div className="max-w-[640px] mx-auto">
         {/* Accent line */}
         <div
           aria-hidden="true"
-          style={{
-            width: '48px',
-            height: '3px',
-            background: 'linear-gradient(90deg, #FF5722, #FFC947)',
-            borderRadius: '2px',
-            margin: '0 auto 36px',
-          }}
+          className="w-12 h-[3px] rounded-[2px] mx-auto mb-9"
+          style={{ background: 'linear-gradient(90deg, #FF5722, #FFC947)' }}
         />
 
         <h2
-          style={{
-            fontFamily: '"Barlow Condensed", sans-serif',
-            fontSize: 'clamp(42px, 7vw, 68px)',
-            fontWeight: 800,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-            color: '#E2E2E4',
-            lineHeight: 0.95,
-            margin: '0 0 24px',
-          }}
+          className="font-display font-extrabold tracking-[0.05em] uppercase text-forge-text leading-[0.95] mb-6"
+          style={{ fontSize: 'clamp(42px, 7vw, 68px)' }}
         >
           Ready to<br />
-          <span style={{ color: '#FF5722' }}>Forge?</span>
+          <span className="text-forge-orange">Forge?</span>
         </h2>
 
-        <p
-          style={{
-            fontFamily: '"IBM Plex Sans", sans-serif',
-            fontSize: '16px',
-            fontWeight: 300,
-            color: '#7A7A84',
-            lineHeight: 1.7,
-            margin: '0 0 48px',
-          }}
-        >
+        <p className="font-body font-light text-base text-forge-muted leading-[1.7] mb-12">
           Your next application could be your best one.
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px' }}>
+        <div className="flex flex-col items-center gap-[18px]">
           <a
             href="/forge"
-            className="landing-btn-primary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '15px 40px',
-              borderRadius: '6px',
-              background: 'linear-gradient(90deg, #FF5722 0%, #FF8C42 100%)',
-              color: '#fff',
-              fontFamily: '"Barlow Condensed", sans-serif',
-              fontSize: '16px',
-              fontWeight: 700,
-              letterSpacing: '0.13em',
-              textTransform: 'uppercase',
-              textDecoration: 'none',
-              boxShadow: '0 0 24px rgba(255,87,34,0.32)',
-            }}
+            className="landing-btn-primary inline-flex items-center gap-2 py-[15px] px-10 rounded-md text-white font-display text-base font-bold tracking-[0.13em] uppercase no-underline shadow-[0_0_24px_rgba(255,87,34,0.32)]"
+            style={{ background: 'linear-gradient(90deg, #FF5722 0%, #FF8C42 100%)' }}
           >
             Open CV Forge →
           </a>
           <a
             href="/cv-manager"
-            style={{
-              fontFamily: '"IBM Plex Sans", sans-serif',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: '#FF8C42',
-              textDecoration: 'none',
-              letterSpacing: '0.02em',
-              transition: 'color 0.2s ease',
-            }}
+            className="font-body text-[13px] font-medium text-forge-heat no-underline tracking-[0.02em] transition-colors hover:text-forge-ember"
           >
             Set up your profile first →
           </a>

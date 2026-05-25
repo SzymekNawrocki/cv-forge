@@ -86,29 +86,17 @@ const features: Feature[] = [
 
 export function LandingFeatures() {
   return (
-    <section style={{ padding: '100px 24px' }}>
-      <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
+    <section className="py-[100px] px-6">
+      <div className="max-w-[1120px] mx-auto">
         {/* Section header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '56px' }}>
+        <div className="flex items-center gap-4 mb-14">
           <div
-            style={{
-              width: '3px',
-              height: '34px',
-              background: 'linear-gradient(180deg, #FF5722 0%, #FFC947 100%)',
-              borderRadius: '2px',
-              flexShrink: 0,
-            }}
+            className="w-[3px] h-[34px] rounded-[2px] shrink-0"
+            style={{ background: 'linear-gradient(180deg, #FF5722 0%, #FFC947 100%)' }}
           />
           <h2
-            style={{
-              fontFamily: '"Barlow Condensed", sans-serif',
-              fontSize: 'clamp(28px, 4vw, 38px)',
-              fontWeight: 800,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              color: '#E2E2E4',
-              margin: 0,
-            }}
+            className="font-display font-extrabold tracking-[0.06em] uppercase text-forge-text m-0"
+            style={{ fontSize: 'clamp(28px, 4vw, 38px)' }}
           >
             What It Does
           </h2>
@@ -116,71 +104,26 @@ export function LandingFeatures() {
 
         {/* Feature grid */}
         <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '1px',
-            background: '#1E1E20',
-            border: '1px solid #1E1E20',
-            borderRadius: '10px',
-            overflow: 'hidden',
-          }}
+          className="grid gap-px bg-forge-elevated border border-forge-elevated rounded-[10px] overflow-hidden"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}
         >
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="landing-feature-card"
-              style={{
-                background: '#161618',
-                border: '1px solid transparent',
-                padding: '32px 28px',
-              }}
+              className="landing-feature-card bg-[#161618] border border-transparent p-8"
             >
               {/* Icon */}
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '8px',
-                  background: 'rgba(255,87,34,0.08)',
-                  border: '1px solid rgba(255,87,34,0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FF5722',
-                  marginBottom: '20px',
-                  flexShrink: 0,
-                }}
-              >
+              <div className="w-10 h-10 rounded-lg bg-[rgba(255,87,34,0.08)] border border-[rgba(255,87,34,0.15)] flex items-center justify-center text-forge-orange mb-5 shrink-0">
                 {feature.icon}
               </div>
 
               {/* Title */}
-              <p
-                style={{
-                  fontFamily: '"Barlow Condensed", sans-serif',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  letterSpacing: '0.16em',
-                  textTransform: 'uppercase',
-                  color: '#E2E2E4',
-                  margin: '0 0 12px',
-                }}
-              >
+              <p className="font-display text-[13px] font-bold tracking-[0.16em] uppercase text-forge-text mb-3">
                 {feature.title}
               </p>
 
               {/* Description */}
-              <p
-                style={{
-                  fontFamily: '"IBM Plex Sans", sans-serif',
-                  fontSize: '13px',
-                  fontWeight: 300,
-                  color: '#7A7A84',
-                  lineHeight: 1.75,
-                  margin: 0,
-                }}
-              >
+              <p className="font-body font-light text-[13px] text-forge-muted leading-[1.75] m-0">
                 {feature.description}
               </p>
             </div>

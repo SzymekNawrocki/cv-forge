@@ -8,20 +8,10 @@ const statusMap: Record<string, { bg: string; text: string; border: string }> = 
 export function StatusBadge({ status }: { status: string }) {
   const s = statusMap[status] ?? { bg: 'rgba(255,255,255,0.05)', text: '#7A7A84', border: '#272729' };
   return (
-    <span style={{
-      display: 'inline-block',
-      padding: '3px 9px',
-      background: s.bg,
-      border: `1px solid ${s.border}`,
-      borderRadius: '4px',
-      fontFamily: '"Barlow Condensed", sans-serif',
-      fontSize: '11px',
-      fontWeight: 700,
-      letterSpacing: '0.10em',
-      textTransform: 'uppercase',
-      color: s.text,
-      whiteSpace: 'nowrap',
-    }}>
+    <span
+      className="inline-block px-[9px] py-[3px] rounded font-display text-[11px] font-bold tracking-widest uppercase whitespace-nowrap"
+      style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text }}
+    >
       {status}
     </span>
   );

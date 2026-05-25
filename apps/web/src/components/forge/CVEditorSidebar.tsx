@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+import { useMemo } from 'react';
 
 export interface CVSection {
   id: string;
@@ -17,8 +15,6 @@ interface Props {
   onSelect: (id: string) => void;
   cvName?: string;
 }
-
-// ── Heat helpers ─────────────────────────────────────────────────────────────
 
 function heatColor(pct: number): string {
   if (pct >= 85) return '#FFC947';
@@ -51,8 +47,6 @@ function heatLabel(pct: number): string {
   return 'COLD';
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
 function SectionRow({
   section,
   isActive,
@@ -62,81 +56,58 @@ function SectionRow({
   isActive: boolean;
   onClick: () => void;
 }) {
-  const [hovered, setHovered] = useState(false);
-  const emphasized = isActive || hovered;
   const color = heatColor(section.heatPercent);
 
   return (
     <button
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className={`w-full py-2.5 px-3 rounded-md cursor-pointer text-left transition-all duration-200 mb-0.5 border ${
+        isActive
+          ? 'border-[rgba(255,87,34,0.35)]'
+          : 'border-transparent hover:border-[#323236] hover:bg-white/[0.025]'
+      }`}
       style={{
-        width: '100%',
-        padding: '10px 12px',
         background: isActive
           ? 'linear-gradient(135deg, rgba(255,87,34,0.08) 0%, rgba(22,22,24,0.9) 100%)'
-          : hovered ? 'rgba(255,255,255,0.025)' : 'transparent',
-        border: `1px solid ${isActive ? 'rgba(255,87,34,0.35)' : hovered ? '#323236' : 'transparent'}`,
-        borderRadius: '6px',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'all 0.20s ease',
-        marginBottom: '2px',
+          : undefined,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '7px' }}>
-        <span style={{
-          fontFamily: '"IBM Plex Sans", var(--font-ibm-plex-sans), sans-serif',
-          fontSize: '12px',
-          fontWeight: 500,
-          color: emphasized ? '#E2E2E4' : '#9A9AA4',
-          letterSpacing: '0.01em',
-          transition: 'color 0.2s ease',
-        }}>
+      <div className="flex justify-between items-center mb-[7px]">
+        <span className={`font-body text-xs font-medium tracking-[0.01em] transition-colors duration-200 ${
+          isActive ? 'text-forge-text' : 'text-[#9A9AA4] hover:text-forge-text'
+        }`}>
           {section.label}
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="flex items-center gap-1.5">
           {!section.forgeable && (
-            <span style={{
-              fontFamily: '"IBM Plex Sans", var(--font-ibm-plex-sans), sans-serif',
-              fontSize: '9px',
-              color: '#5C5C66',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-            }}>
+            <span className="font-body text-[9px] text-[#5C5C66] tracking-[0.06em] uppercase">
               locked
             </span>
           )}
-          <span style={{
-            fontFamily: '"Barlow Condensed", var(--font-barlow-condensed), sans-serif',
-            fontSize: '10px',
-            fontWeight: 700,
-            letterSpacing: '0.1em',
-            color,
-            transition: 'color 0.3s ease',
-          }}>
+          <span
+            className="font-display text-[10px] font-bold tracking-[0.1em] transition-colors duration-300"
+            style={{ color }}
+          >
             {heatLabel(section.heatPercent)}
           </span>
         </div>
       </div>
 
       {/* Mini heat bar */}
-      <div style={{ height: '2px', background: '#1A1A1C', borderRadius: '1px', overflow: 'hidden' }}>
-        <div style={{
-          height: '100%',
-          width: `${Math.max(0, Math.min(100, section.heatPercent))}%`,
-          background: heatBarGradient(section.heatPercent),
-          borderRadius: '1px',
-          boxShadow: isActive ? heatBarGlow(section.heatPercent) : 'none',
-          transition: 'width 0.7s cubic-bezier(0.25,0.46,0.45,0.94)',
-        }} />
+      <div className="h-[2px] bg-[#1A1A1C] rounded-[1px] overflow-hidden">
+        <div
+          className="h-full rounded-[1px] transition-[width] duration-700"
+          style={{
+            width: `${Math.max(0, Math.min(100, section.heatPercent))}%`,
+            background: heatBarGradient(section.heatPercent),
+            boxShadow: isActive ? heatBarGlow(section.heatPercent) : 'none',
+            transitionTimingFunction: 'cubic-bezier(0.25,0.46,0.45,0.94)',
+          }}
+        />
       </div>
     </button>
   );
 }
-
-// ── Main component ────────────────────────────────────────────────────────────
 
 export default function CVEditorSidebar({ sections, activeId, onSelect, cvName = 'Master CV' }: Props) {
   const { forgeableSections, overallHeat } = useMemo(() => {
@@ -149,127 +120,64 @@ export default function CVEditorSidebar({ sections, activeId, onSelect, cvName =
     };
   }, [sections]);
 
+  void forgeableSections;
+
   return (
     <aside
-      className="forge-scroll"
-      style={{
-        width: '260px',
-        flexShrink: 0,
-        background: '#0D0D0E',
-        borderRight: '1px solid #272729',
-        display: 'flex',
-        flexDirection: 'column',
-        overflowY: 'auto',
-        padding: '20px 12px',
-      }}
+      className="forge-scroll w-[260px] shrink-0 bg-forge-base border-r border-forge-border flex flex-col overflow-y-auto py-5 px-3"
     >
       {/* Active CV chip */}
-      <div style={{ marginBottom: '18px' }}>
-        <p style={{
-          fontFamily: '"Barlow Condensed", var(--font-barlow-condensed), sans-serif',
-          fontSize: '10px',
-          fontWeight: 700,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: '#5C5C66',
-          marginBottom: '8px',
-          paddingLeft: '2px',
-        }}>
+      <div className="mb-[18px]">
+        <p className="font-display text-[10px] font-bold tracking-[0.14em] uppercase text-[#5C5C66] mb-2 pl-0.5">
           Active CV
         </p>
-        <div style={{
-          padding: '10px 12px',
-          background: '#161618',
-          border: '1px solid #272729',
-          borderRadius: '7px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
+        <div className="py-2.5 px-3 bg-forge-surface border border-forge-border rounded-[7px] flex items-center justify-between">
           <div>
-            <p style={{
-              fontFamily: '"IBM Plex Sans", var(--font-ibm-plex-sans), sans-serif',
-              fontSize: '13px',
-              fontWeight: 500,
-              color: '#E2E2E4',
-              marginBottom: '2px',
-            }}>
+            <p className="font-body text-[13px] font-medium text-forge-text mb-0.5">
               {cvName}
             </p>
-            <p style={{
-              fontFamily: '"IBM Plex Sans", var(--font-ibm-plex-sans), sans-serif',
-              fontSize: '11px',
-              color: '#7A7A84',
-            }}>
+            <p className="font-body text-[11px] text-forge-muted">
               {sections.length} sections
             </p>
           </div>
           {/* Active pulse dot */}
-          <div style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            background: '#FF5722',
-            boxShadow: '0 0 10px rgba(255,87,34,0.55)',
-            animation: 'forge-pulse 2.2s ease-in-out infinite',
-          }} />
+          <div
+            className="w-2 h-2 rounded-full bg-forge-orange animate-[forge-pulse_2.2s_ease-in-out_infinite]"
+            style={{ boxShadow: '0 0 10px rgba(255,87,34,0.55)' }}
+          />
         </div>
       </div>
 
       {/* Overall forge heat */}
-      <div style={{
-        padding: '14px 12px',
-        background: '#161618',
-        border: '1px solid #272729',
-        borderRadius: '7px',
-        marginBottom: '18px',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{
-            fontFamily: '"Barlow Condensed", var(--font-barlow-condensed), sans-serif',
-            fontSize: '10px',
-            fontWeight: 700,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: '#5C5C66',
-          }}>
+      <div className="py-3.5 px-3 bg-forge-surface border border-forge-border rounded-[7px] mb-[18px]">
+        <div className="flex justify-between items-center mb-2">
+          <span className="font-display text-[10px] font-bold tracking-[0.14em] uppercase text-[#5C5C66]">
             Forge Heat
           </span>
-          <span style={{
-            fontFamily: '"Barlow Condensed", var(--font-barlow-condensed), sans-serif',
-            fontSize: '24px',
-            fontWeight: 800,
-            color: heatColor(overallHeat),
-            lineHeight: 1,
-          }}>
+          <span
+            className="font-display text-2xl font-extrabold leading-none"
+            style={{ color: heatColor(overallHeat) }}
+          >
             {overallHeat}%
           </span>
         </div>
         {/* Master heat bar */}
-        <div style={{ height: '4px', background: '#1A1A1C', borderRadius: '2px', overflow: 'hidden', border: '1px solid #222224' }}>
-          <div style={{
-            height: '100%',
-            width: `${overallHeat}%`,
-            background: heatBarGradient(overallHeat),
-            borderRadius: '2px',
-            boxShadow: heatBarGlow(overallHeat),
-            transition: 'width 0.9s cubic-bezier(0.25,0.46,0.45,0.94)',
-          }} />
+        <div className="h-1 bg-[#1A1A1C] rounded-[2px] overflow-hidden border border-[#222224]">
+          <div
+            className="h-full rounded-[2px] transition-[width] duration-900"
+            style={{
+              width: `${overallHeat}%`,
+              background: heatBarGradient(overallHeat),
+              boxShadow: heatBarGlow(overallHeat),
+              transitionTimingFunction: 'cubic-bezier(0.25,0.46,0.45,0.94)',
+            }}
+          />
         </div>
       </div>
 
       {/* Sections list */}
       <div>
-        <p style={{
-          fontFamily: '"Barlow Condensed", var(--font-barlow-condensed), sans-serif',
-          fontSize: '10px',
-          fontWeight: 700,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: '#5C5C66',
-          marginBottom: '8px',
-          paddingLeft: '2px',
-        }}>
+        <p className="font-display text-[10px] font-bold tracking-[0.14em] uppercase text-[#5C5C66] mb-2 pl-0.5">
           CV Sections
         </p>
         {sections.map(section => (

@@ -5,7 +5,7 @@ import { LandingCta } from "@/components/landing/LandingCta";
 
 export default function HomePage() {
   return (
-    <main style={{ background: '#0D0D0E' }}>
+    <main className="bg-forge-base">
       <LandingHero />
       <LandingHowItWorks />
       <LandingFeatures />

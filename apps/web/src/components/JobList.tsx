@@ -4,29 +4,11 @@ import { JobCard } from "./JobCard";
 export function JobList({ jobs }: { jobs: Job[] }) {
   if (jobs.length === 0) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '80px 0',
-        gap: '10px',
-      }}>
-        <p style={{
-          fontFamily: '"Barlow Condensed", sans-serif',
-          fontSize: '16px',
-          fontWeight: 700,
-          letterSpacing: '0.10em',
-          textTransform: 'uppercase',
-          color: '#5C5C66',
-        }}>
+      <div className="flex flex-col items-center justify-center py-20 gap-2.5">
+        <p className="font-display text-base font-bold tracking-[0.10em] uppercase text-[#5C5C66]">
           No jobs found
         </p>
-        <p style={{
-          fontFamily: '"IBM Plex Sans", sans-serif',
-          fontSize: '13px',
-          color: '#3A3A3E',
-        }}>
+        <p className="font-body text-[13px] text-[#3A3A3E]">
           Trigger a scrape to populate the board
         </p>
       </div>
