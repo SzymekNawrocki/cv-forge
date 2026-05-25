@@ -18,7 +18,7 @@ import CVListRow from "@/components/CVListRow";
 const CVManualForm = dynamic(() => import("@/components/CVManualForm"), {
   ssr: false,
   loading: () => (
-    <p className="font-body text-[13px] text-[#5C5C70] py-8">
+    <p className="font-body text-[13px] text-forge-muted py-8">
       Loading form...
     </p>
   ),
@@ -27,8 +27,8 @@ const CVManualForm = dynamic(() => import("@/components/CVManualForm"), {
 type Tab = "import" | "manual";
 type Section = "cvs" | "profile";
 
-const inputClass = "forge-input bg-forge-surface border border-[#222224] rounded-md py-2.5 px-3.5 font-body text-[13px] text-forge-text outline-none w-full box-border";
-const labelClass = "font-display text-[11px] font-bold tracking-[0.14em] uppercase text-[#9A9AA4] mb-1.5 block";
+const inputClass = "forge-input bg-forge-surface border border-forge-track rounded-md py-2.5 px-3.5 font-body text-[13px] text-forge-text outline-none w-full box-border";
+const labelClass = "font-display text-[11px] font-bold tracking-[0.14em] uppercase text-forge-hint mb-1.5 block";
 
 function Field({
   label,
@@ -73,7 +73,7 @@ function Field({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="border-t border-forge-elevated pt-5 font-display text-[10px] font-bold tracking-[0.18em] uppercase text-[#5C5C70]">
+    <div className="border-t border-forge-elevated pt-5 font-display text-[10px] font-bold tracking-[0.18em] uppercase text-forge-hint">
       {children}
     </div>
   );
@@ -218,8 +218,8 @@ export default function CVManagerPage() {
               onClick={() => setSection(s)}
               className={`flex-1 py-1.5 px-1 rounded-[5px] font-display text-[10px] font-bold tracking-[0.10em] uppercase cursor-pointer transition-all duration-[180ms] border ${
                 section === s
-                  ? 'bg-forge-elevated border-[#2A2A2C] text-forge-text'
-                  : 'bg-transparent border-transparent text-[#5C5C66]'
+                  ? 'bg-forge-elevated border-forge-line text-forge-text'
+                  : 'bg-transparent border-transparent text-forge-hint'
               }`}
             >
               {s === 'cvs' ? 'CVs' : 'Profile'}
@@ -229,11 +229,11 @@ export default function CVManagerPage() {
 
         {section === 'cvs' && (
           <>
-            <p className="font-display text-[10px] font-bold tracking-[0.16em] uppercase text-[#C4C4CC] mb-1.5 pl-0.5">
+            <p className="font-display text-[10px] font-bold tracking-[0.16em] uppercase text-forge-label mb-1.5 pl-0.5">
               Saved CVs
             </p>
             {cvs.length === 0 && (
-              <p className="font-body text-[13px] text-[#5C5C70] pl-0.5">No CVs yet.</p>
+              <p className="font-body text-[13px] text-forge-muted pl-0.5">No CVs yet.</p>
             )}
             {cvs.map((cv) => (
               <CVListRow
@@ -259,12 +259,12 @@ export default function CVManagerPage() {
               <h1 className="font-display text-[26px] font-extrabold tracking-[0.08em] uppercase text-forge-text m-0 leading-none">
                 PROFILE<span className="text-forge-orange"> /</span> SETTINGS
               </h1>
-              <p className="font-body text-[13px] text-[#A8A8B4] mt-1.5">
+              <p className="font-body text-[13px] text-forge-hint mt-1.5">
                 Global defaults auto-filled when creating a new CV. Links appear in every tailored PDF.
               </p>
             </div>
             {!profileLoaded ? (
-              <p className="font-body text-[13px] text-[#9A9AA4]">Loading...</p>
+              <p className="font-body text-[13px] text-forge-hint">Loading...</p>
             ) : (
               <div className="flex flex-col gap-5 max-w-[520px]">
                 <SectionLabel>Identity</SectionLabel>
@@ -309,7 +309,7 @@ export default function CVManagerPage() {
                 </h1>
                 <button
                   onClick={() => setSelected(null)}
-                  className="py-[7px] px-3.5 bg-transparent border border-forge-border rounded-[5px] font-display text-xs font-bold tracking-[0.1em] uppercase text-[#C4C4CC] cursor-pointer transition-all duration-200 hover:text-forge-text hover:border-[#3A3A3E]"
+                  className="py-[7px] px-3.5 bg-transparent border border-forge-border rounded-[5px] font-display text-xs font-bold tracking-[0.1em] uppercase text-forge-label cursor-pointer transition-all duration-200 hover:text-forge-text hover:border-forge-ghost"
                 >
                   + New CV
                 </button>
@@ -322,17 +322,17 @@ export default function CVManagerPage() {
                     {selected.portfolio_url ? (
                       <a href={selected.portfolio_url} target="_blank" rel="noopener noreferrer" className="font-body text-xs text-forge-orange no-underline">↗ Portfolio</a>
                     ) : (
-                      <span className="font-body text-xs text-[#5C5C70]">No portfolio</span>
+                      <span className="font-body text-xs text-forge-muted">No portfolio</span>
                     )}
                     {selected.github_url ? (
                       <a href={selected.github_url} target="_blank" rel="noopener noreferrer" className="font-body text-xs text-forge-orange no-underline">↗ GitHub</a>
                     ) : (
-                      <span className="font-body text-xs text-[#5C5C70]">No GitHub</span>
+                      <span className="font-body text-xs text-forge-muted">No GitHub</span>
                     )}
                   </div>
                   <button
                     onClick={() => setEditLinks(!editLinks)}
-                    className="py-1 px-2.5 bg-transparent border border-forge-border rounded rounded-[4px] font-display text-[10px] font-bold tracking-[0.1em] uppercase text-[#C4C4CC] cursor-pointer hover:text-forge-text transition-colors"
+                    className="py-1 px-2.5 bg-transparent border border-forge-border rounded rounded-[4px] font-display text-[10px] font-bold tracking-[0.1em] uppercase text-forge-label cursor-pointer hover:text-forge-text transition-colors"
                   >
                     {editLinks ? 'Cancel' : 'Edit Links'}
                   </button>
@@ -341,11 +341,11 @@ export default function CVManagerPage() {
                   <div className="flex flex-col gap-2.5">
                     <div className="grid grid-cols-2 gap-2.5">
                       <div>
-                        <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-[#C4C4CC] block mb-[5px]">Portfolio URL</label>
+                        <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-forge-label block mb-[5px]">Portfolio URL</label>
                         <input className={inputClass} value={linkPortfolio} onChange={(e) => setLinkPortfolio(e.target.value)} placeholder="https://yoursite.com" />
                       </div>
                       <div>
-                        <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-[#C4C4CC] block mb-[5px]">GitHub URL</label>
+                        <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-forge-label block mb-[5px]">GitHub URL</label>
                         <input className={inputClass} value={linkGithub} onChange={(e) => setLinkGithub(e.target.value)} placeholder="https://github.com/username" />
                       </div>
                     </div>
@@ -367,7 +367,7 @@ export default function CVManagerPage() {
                 )}
               </div>
 
-              <pre className="bg-forge-surface border border-[#222224] rounded-lg py-[18px] px-5 font-mono text-xs text-[#C4C4CC] whitespace-pre-wrap overflow-y-auto max-h-[55vh] leading-[1.75] m-0">
+              <pre className="bg-forge-surface border border-forge-track rounded-lg py-[18px] px-5 font-mono text-xs text-forge-label whitespace-pre-wrap overflow-y-auto max-h-[55vh] leading-[1.75] m-0">
                 {selected.content_markdown}
               </pre>
             </>
@@ -389,7 +389,7 @@ export default function CVManagerPage() {
                     className={`py-2 px-5 bg-transparent border-none font-display text-xs font-bold tracking-[0.12em] uppercase cursor-pointer transition-colors duration-[180ms] -mb-px ${
                       tab === t
                         ? 'text-forge-text border-b-2 border-b-forge-orange'
-                        : 'text-[#5C5C66] border-b-2 border-b-transparent'
+                        : 'text-forge-hint border-b-2 border-b-transparent'
                     }`}
                   >
                     {t === 'import' ? 'Import Text' : 'Fill In Manually'}
@@ -399,7 +399,7 @@ export default function CVManagerPage() {
 
               {tab === 'import' ? (
                 <>
-                  <p className="font-body text-[13px] text-[#A8A8B4] m-0">
+                  <p className="font-body text-[13px] text-forge-hint m-0">
                     Paste raw CV text — AI will clean and structure it into Markdown.
                   </p>
                   <input
@@ -409,7 +409,7 @@ export default function CVManagerPage() {
                     onChange={(e) => setTitle(e.target.value)}
                   />
                   <textarea
-                    className={`${inputClass} font-mono text-xs text-[#C4C4CC] resize-y leading-[1.75] min-h-[280px]`}
+                    className={`${inputClass} font-mono text-xs text-forge-label resize-y leading-[1.75] min-h-[280px]`}
                     placeholder="Paste raw CV text here..."
                     rows={14}
                     value={rawText}
@@ -417,11 +417,11 @@ export default function CVManagerPage() {
                   />
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-[#C4C4CC] block mb-[5px]">Portfolio URL</label>
+                      <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-forge-label block mb-[5px]">Portfolio URL</label>
                       <input className={inputClass} value={importPortfolio} onChange={(e) => setImportPortfolio(e.target.value)} placeholder="https://yoursite.com" />
                     </div>
                     <div>
-                      <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-[#C4C4CC] block mb-[5px]">GitHub URL</label>
+                      <label className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-forge-label block mb-[5px]">GitHub URL</label>
                       <input className={inputClass} value={importGithub} onChange={(e) => setImportGithub(e.target.value)} placeholder="https://github.com/username" />
                     </div>
                   </div>

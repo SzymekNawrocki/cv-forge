@@ -74,13 +74,13 @@ function SectionRow({
     >
       <div className="flex justify-between items-center mb-[7px]">
         <span className={`font-body text-xs font-medium tracking-[0.01em] transition-colors duration-200 ${
-          isActive ? 'text-forge-text' : 'text-[#9A9AA4] hover:text-forge-text'
+          isActive ? 'text-forge-text' : 'text-forge-hint hover:text-forge-text'
         }`}>
           {section.label}
         </span>
         <div className="flex items-center gap-1.5">
           {!section.forgeable && (
-            <span className="font-body text-[9px] text-[#5C5C66] tracking-[0.06em] uppercase">
+            <span className="font-body text-[9px] text-forge-hint tracking-[0.06em] uppercase">
               locked
             </span>
           )}
@@ -94,7 +94,7 @@ function SectionRow({
       </div>
 
       {/* Mini heat bar */}
-      <div className="h-[2px] bg-[#1A1A1C] rounded-[1px] overflow-hidden">
+      <div className="h-[2px] bg-forge-input rounded-[1px] overflow-hidden">
         <div
           className="h-full rounded-[1px] transition-[width] duration-700"
           style={{
@@ -128,7 +128,7 @@ export default function CVEditorSidebar({ sections, activeId, onSelect, cvName =
     >
       {/* Active CV chip */}
       <div className="mb-[18px]">
-        <p className="font-display text-[10px] font-bold tracking-[0.14em] uppercase text-[#5C5C66] mb-2 pl-0.5">
+        <p className="font-display text-[10px] font-bold tracking-[0.14em] uppercase text-forge-hint mb-2 pl-0.5">
           Active CV
         </p>
         <div className="py-2.5 px-3 bg-forge-surface border border-forge-border rounded-[7px] flex items-center justify-between">
@@ -151,7 +151,7 @@ export default function CVEditorSidebar({ sections, activeId, onSelect, cvName =
       {/* Overall forge heat */}
       <div className="py-3.5 px-3 bg-forge-surface border border-forge-border rounded-[7px] mb-[18px]">
         <div className="flex justify-between items-center mb-2">
-          <span className="font-display text-[10px] font-bold tracking-[0.14em] uppercase text-[#5C5C66]">
+          <span className="font-display text-[10px] font-bold tracking-[0.14em] uppercase text-forge-hint">
             Forge Heat
           </span>
           <span
@@ -162,7 +162,7 @@ export default function CVEditorSidebar({ sections, activeId, onSelect, cvName =
           </span>
         </div>
         {/* Master heat bar */}
-        <div className="h-1 bg-[#1A1A1C] rounded-[2px] overflow-hidden border border-[#222224]">
+        <div className="h-1 bg-forge-input rounded-[2px] overflow-hidden border border-forge-track">
           <div
             className="h-full rounded-[2px] transition-[width] duration-900"
             style={{
@@ -177,7 +177,7 @@ export default function CVEditorSidebar({ sections, activeId, onSelect, cvName =
 
       {/* Sections list */}
       <div>
-        <p className="font-display text-[10px] font-bold tracking-[0.14em] uppercase text-[#5C5C66] mb-2 pl-0.5">
+        <p className="font-display text-[10px] font-bold tracking-[0.14em] uppercase text-forge-hint mb-2 pl-0.5">
           CV Sections
         </p>
         {sections.map(section => (

@@ -11,7 +11,7 @@ export function JobCard({ job }: { job: Job }) {
   return (
     <Link
       href={`/jobs/${job.id}`}
-      className="block rounded-xl border border-[#222224] bg-forge-surface p-5 no-underline transition-all duration-[250ms] hover:border-[rgba(255,87,34,0.35)] hover:shadow-[0_0_28px_rgba(255,87,34,0.08),0_4px_20px_rgba(0,0,0,0.4)] hover:bg-[#191919]"
+      className="block rounded-xl border border-forge-track bg-forge-surface p-5 no-underline transition-all duration-[250ms] hover:border-[rgba(255,87,34,0.35)] hover:shadow-[0_0_28px_rgba(255,87,34,0.08),0_4px_20px_rgba(0,0,0,0.4)] hover:bg-[#191919]"
     >
       <div className="flex items-start justify-between gap-2 mb-1">
         <div className="min-w-0">
@@ -36,13 +36,13 @@ export function JobCard({ job }: { job: Job }) {
           {job.tech_stack.slice(0, 6).map((tech) => (
             <span
               key={tech}
-              className="px-2 py-[3px] bg-white/[0.04] border border-[#2A2A2C] rounded-[3px] font-body text-[11px] text-[#9A9AA4]"
+              className="px-2 py-[3px] bg-white/[0.04] border border-forge-line rounded-[3px] font-body text-[11px] text-forge-hint"
             >
               {tech}
             </span>
           ))}
           {job.tech_stack.length > 6 && (
-            <span className="text-[11px] text-[#5C5C66] self-center">
+            <span className="text-[11px] text-forge-hint self-center">
               +{job.tech_stack.length - 6}
             </span>
           )}

@@ -10,7 +10,7 @@ import type { CVData } from "@/components/CVDocument";
 const CVViewer = dynamic(() => import("@/components/CVViewer"), {
   ssr: false,
   loading: () => (
-    <div className="flex-1 flex items-center justify-center text-[#5C5C70] font-body text-[13px]">
+    <div className="flex-1 flex items-center justify-center text-forge-muted font-body text-[13px]">
       Loading preview...
     </div>
   ),
@@ -51,7 +51,7 @@ export default function ForgeReview({
         </h1>
         <div className="flex items-center gap-2">
           <ScoreBadge label="Before" score={result.initial_match_score} />
-          <span className="text-[#3A3A3E] text-sm">→</span>
+          <span className="text-forge-muted text-sm">→</span>
           <ScoreBadge label="After" score={result.match_score} />
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -77,7 +77,7 @@ export default function ForgeReview({
             </div>
             <span
               className="font-body text-[10px]"
-              style={{ color: aggressive ? "#FF8C42" : "#5C5C66", fontWeight: aggressive ? 700 : 400 }}
+              style={{ color: aggressive ? "var(--color-forge-heat)" : "var(--color-forge-muted)", fontWeight: aggressive ? 700 : 400 }}
             >
               Aggressive
             </span>
@@ -88,7 +88,7 @@ export default function ForgeReview({
             disabled={isPending}
             className={`relative flex items-center gap-2 py-2 px-4 rounded-md font-display text-xs font-bold tracking-[0.12em] uppercase transition-all duration-200 border ${
               isPending
-                ? "border-forge-border cursor-not-allowed text-[#3A3A3E]"
+                ? "border-forge-border cursor-not-allowed text-forge-ghost"
                 : "border-transparent cursor-pointer text-white shadow-[0_0_10px_rgba(255,87,34,0.18),0_2px_8px_rgba(0,0,0,0.40)]"
             }`}
             style={{ background: isPending ? "#1A1A1C" : "linear-gradient(135deg, #FF5722, #FF8C42)" }}
@@ -117,17 +117,17 @@ export default function ForgeReview({
       <div className="flex-1 grid gap-4 min-h-0" style={{ gridTemplateColumns: "200px 1fr" }}>
         {/* Left: JD + CV selector */}
         <div className="flex flex-col gap-1.5 min-h-0">
-          <label className="font-display text-[10px] font-bold tracking-[0.16em] uppercase text-[#5C5C66] shrink-0">
+          <label className="font-display text-[10px] font-bold tracking-[0.16em] uppercase text-forge-label shrink-0">
             Job Description
           </label>
           <textarea
             readOnly
             value={jdText}
-            className="flex-1 bg-[#111113] border border-[#1A1A1C] rounded-md py-2.5 px-3 font-body text-[11px] text-[#5C5C66] resize-none outline-none leading-[1.6] cursor-default"
+            className="flex-1 bg-forge-card border border-forge-elevated rounded-md py-2.5 px-3 font-body text-[11px] text-forge-hint resize-none outline-none leading-[1.6] cursor-default"
           />
           <div className="relative shrink-0">
             <select
-              className="w-full appearance-none bg-[#111113] border border-[#1A1A1C] rounded-md py-[7px] pl-2.5 pr-7 font-body text-[11px] text-forge-muted cursor-pointer outline-none"
+              className="w-full appearance-none bg-forge-card border border-forge-elevated rounded-md py-[7px] pl-2.5 pr-7 font-body text-[11px] text-forge-hint cursor-pointer outline-none"
               value={selectedId}
               onChange={(e) => onSelectId(Number(e.target.value))}
             >
@@ -135,7 +135,7 @@ export default function ForgeReview({
                 <option key={cv.id} value={cv.id} className="bg-forge-surface text-forge-text">{cv.title}</option>
               ))}
             </select>
-            <span className="absolute right-[9px] top-1/2 -translate-y-1/2 pointer-events-none text-[#5C5C66] text-[10px]">▾</span>
+            <span className="absolute right-[9px] top-1/2 -translate-y-1/2 pointer-events-none text-forge-muted text-[10px]">▾</span>
           </div>
         </div>
 
@@ -148,14 +148,14 @@ export default function ForgeReview({
                 onClick={() => onTabChange(tab)}
                 className={`py-[5px] px-3.5 font-display text-[10px] font-bold tracking-[0.12em] uppercase cursor-pointer rounded-[5px] border transition-colors ${
                   rightTab === tab
-                    ? "bg-forge-elevated border-[#2A2A2C] text-forge-text"
-                    : "bg-transparent border-transparent text-[#5C5C66]"
+                    ? "bg-forge-elevated border-forge-line text-forge-text"
+                    : "bg-transparent border-transparent text-forge-muted"
                 }`}
               >
                 {tab}
               </button>
             ))}
-            <span className="font-display text-[10px] tracking-[0.16em] uppercase text-[#3A3A3E] ml-auto">
+            <span className="font-display text-[10px] tracking-[0.16em] uppercase text-forge-muted ml-auto">
               CV #{result.id}
             </span>
           </div>
@@ -165,7 +165,7 @@ export default function ForgeReview({
             </div>
           )}
           {rightTab === "edit" && (
-            <div className="flex-1 overflow-y-auto bg-forge-surface border border-[#222224] rounded-[7px] p-4">
+            <div className="flex-1 overflow-y-auto bg-forge-surface border border-forge-track rounded-[7px] p-4">
               <CVEditor data={cvData} onChange={onEditedData} />
             </div>
           )}

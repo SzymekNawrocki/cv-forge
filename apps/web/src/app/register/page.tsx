@@ -32,10 +32,10 @@ export default function RegisterPage() {
   if (done) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-forge-base">
-        <div className="w-full max-w-[400px] p-10 bg-[#111113] border border-forge-elevated rounded-xl text-center">
+        <div className="w-full max-w-[400px] p-10 bg-forge-card border border-forge-elevated rounded-xl text-center">
           <div className="text-[40px] mb-4">📬</div>
           <h2 className="text-forge-text text-xl mb-3">Check your email</h2>
-          <p className="text-[#888] text-sm leading-[1.6]">
+          <p className="text-forge-hint text-sm leading-[1.6]">
             We sent a verification link to <strong className="text-forge-text">{email}</strong>.
             Click the link to activate your account.
           </p>
@@ -49,7 +49,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-forge-base">
-      <div className="w-full max-w-[400px] p-10 bg-[#111113] border border-forge-elevated rounded-xl text-center">
+      <div className="w-full max-w-[400px] p-10 bg-forge-card border border-forge-elevated rounded-xl text-center">
         <div className="flex justify-center -mt-10 -mb-[60px]">
           <Image
             src="/cv-forge-logo.png"
@@ -60,11 +60,11 @@ export default function RegisterPage() {
             priority
           />
         </div>
-        <p className="text-[#888] text-sm mb-8">Create your account</p>
+        <p className="text-forge-hint text-sm mb-8">Create your account</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="block text-xs text-[#999] mb-1.5 uppercase tracking-[0.05em]">
+            <label className="block text-xs text-forge-label mb-1.5 uppercase tracking-[0.05em]">
               Email
             </label>
             <input
@@ -72,11 +72,11 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="forge-input w-full py-2.5 px-3.5 bg-[#1A1A1C] border border-[#2A2A2E] rounded-md text-forge-text text-sm"
+              className="forge-input w-full py-2.5 px-3.5 bg-forge-input border border-forge-line rounded-md text-forge-text text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs text-[#999] mb-1.5 uppercase tracking-[0.05em]">
+            <label className="block text-xs text-forge-label mb-1.5 uppercase tracking-[0.05em]">
               Password
             </label>
             <input
@@ -85,9 +85,9 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
-              className="forge-input w-full py-2.5 px-3.5 bg-[#1A1A1C] border border-[#2A2A2E] rounded-md text-forge-text text-sm"
+              className="forge-input w-full py-2.5 px-3.5 bg-forge-input border border-forge-line rounded-md text-forge-text text-sm"
             />
-            <p className="text-[11px] text-[#555] mt-1">Minimum 8 characters</p>
+            <p className="text-[11px] text-forge-hint mt-1">Minimum 8 characters</p>
           </div>
 
           {error && (
@@ -103,7 +103,7 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="text-center mt-6 text-[13px] text-[#666]">
+        <p className="text-center mt-6 text-[13px] text-forge-hint">
           Already have an account?{" "}
           <a href="/login" className="text-forge-orange no-underline">Sign in</a>
         </p>

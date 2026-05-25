@@ -28,7 +28,7 @@ export default function UserMenu() {
   if (!user) return (
     <a
       href="/login"
-      className="py-[5px] px-3 bg-transparent border border-forge-border rounded-[5px] text-[#999] text-xs no-underline hover:text-forge-text hover:border-[#3A3A3E] transition-colors"
+      className="py-[5px] px-3 bg-transparent border border-forge-border rounded-[5px] text-forge-hint text-xs no-underline hover:text-forge-text hover:border-forge-ghost transition-colors"
     >
       Sign in
     </a>
@@ -39,7 +39,7 @@ export default function UserMenu() {
       <span className="text-xs text-forge-muted">{user.email}</span>
       <button
         onClick={handleLogout}
-        className="py-[5px] px-3 bg-transparent border border-forge-border rounded-[5px] text-[#999] text-xs cursor-pointer hover:text-forge-text hover:border-[#3A3A3E] transition-colors"
+        className="py-[5px] px-3 bg-transparent border border-forge-border rounded-[5px] text-forge-hint text-xs cursor-pointer hover:text-forge-text hover:border-forge-ghost transition-colors"
       >
         Sign out
       </button>

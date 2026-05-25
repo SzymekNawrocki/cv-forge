@@ -59,7 +59,7 @@ export function LandingHero() {
           </a>
           <a
             href="/cv-manager"
-            className="landing-btn-secondary inline-flex items-center gap-2 py-3.5 px-[34px] rounded-md bg-transparent text-[#C8C8D2] font-display text-[15px] font-bold tracking-[0.13em] uppercase no-underline border border-[rgba(255,87,34,0.25)]"
+            className="landing-btn-secondary inline-flex items-center gap-2 py-3.5 px-[34px] rounded-md bg-transparent text-forge-label font-display text-[15px] font-bold tracking-[0.13em] uppercase no-underline border border-[rgba(255,87,34,0.25)]"
           >
             Build Your CV
           </a>
@@ -67,7 +67,7 @@ export function LandingHero() {
 
         {/* Bottom micro-text */}
         <p
-          className="mt-14 font-body text-xs text-[#3A3A3E] tracking-[0.05em] animate-[forge-fade-in_0.5s_ease-out_0.7s_both]"
+          className="mt-14 font-body text-xs text-forge-ghost tracking-[0.05em] animate-[forge-fade-in_0.5s_ease-out_0.7s_both]"
         >
           Gemini 2.5 Flash &nbsp;·&nbsp; Groq Llama 3.3 fallback &nbsp;·&nbsp; Entry-level focused
         </p>

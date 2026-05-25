@@ -49,7 +49,7 @@ export default function SettingsPage() {
           Global preferences for CV Forge.
         </p>
 
-        <section className="bg-[#141416] border border-forge-elevated rounded-lg px-7 py-6 mb-6">
+        <section className="bg-forge-surface border border-forge-elevated rounded-lg px-7 py-6 mb-6">
           <h2 className="font-display font-bold text-sm tracking-[0.1em] uppercase text-forge-muted mb-4">
             AI Model
           </h2>
@@ -59,7 +59,7 @@ export default function SettingsPage() {
           </p>
 
           {!profile && !loadError && (
-            <p className="text-[#666] text-[13px]">Loading…</p>
+            <p className="text-forge-hint text-[13px]">Loading…</p>
           )}
 
           {loadError && (
@@ -71,7 +71,7 @@ export default function SettingsPage() {
               <select
                 value={activeModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
-                className="forge-input w-full bg-forge-base border border-[#2A2A2D] rounded-md text-forge-text text-[13px] py-2.5 px-3 mb-4 outline-none cursor-pointer"
+                className="forge-input w-full bg-forge-base border border-forge-track rounded-md text-forge-text text-[13px] py-2.5 px-3 mb-4 outline-none cursor-pointer"
               >
                 {FREE_MODELS.map((m) => (
                   <option key={m.id} value={m.id}>

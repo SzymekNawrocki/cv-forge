@@ -1,91 +1,187 @@
 # CV Forge
 
-AI-powered CV tailoring tool for entry-level candidates. Paste a job description, get a surgically rewritten CV optimised for ATS and scored for match quality — then download it as a polished PDF.
+AI-powered CV tailoring for entry-level candidates. Paste a job description, select your Master CV, and the AI rewrites each section to maximise ATS keyword coverage. You review the output and remove anything inaccurate before downloading a polished PDF.
 
-## How it works
+---
 
-1. **Build your Master CV** — import raw text (AI-cleaned) or fill in a structured form
-2. **Manage your Skills DB** — maintain a categorised skills list that gets injected at forge time
-3. **Forge** — paste a job description, the AI analyses it, rewrites each CV section, scores the match before and after, and produces a downloadable PDF
+## How It Works
 
-## Tech stack
+1. **Build your Master CV** — import raw text (AI-cleaned to canonical Markdown) or fill in a structured form
+2. **Manage your Skills DB** — maintain a categorised skills list injected automatically at forge time
+3. **Forge** — paste a job description, the AI analyses keywords, rewrites each CV section, scores the match before and after, and produces a downloadable PDF
+4. **Review & edit** — per-section editor live-updates the PDF preview; delete any inaccurate AI insertions
+
+---
+
+## Screenshots
+
+### CV Manager — Import Text
+Paste raw CV text. AI cleans and restructures it into canonical Markdown.
+
+![CV Manager — Import](docs/screenshots/cv-manager-import.png)
+
+### CV Manager — Fill In Manually
+Structured form with dynamic arrays for work experience, projects, education, languages, and certifications. Skills are pre-populated from your Skills DB.
+
+![CV Manager — Manual Form](docs/screenshots/cv-manager-manual.png)
+
+### Forge — Setup
+Paste the full job description, select a Master CV, and toggle Aggressive mode.
+
+![Forge — Setup](docs/screenshots/forge-setup.png)
+
+### Forge — Preview
+Before → After ATS match score badges. The tailored CV renders as a real PDF in the browser.
+
+![Forge — Preview](docs/screenshots/forge-preview.png)
+
+### Forge — Edit
+Per-section accordion editor. Live-updates the PDF preview as you type.
+
+![Forge — Edit](docs/screenshots/forge-edit.png)
+
+---
+
+## Tech Stack
 
 | Layer | Technology | Version |
 |---|---|---|
-| Frontend framework | Next.js | 16.2.4 |
+| Frontend framework | Next.js (App Router) | 16.2.4 |
 | UI library | React | 19.2.4 |
-| CSS | Tailwind CSS | v4 |
+| Styling | Tailwind CSS | v4 |
 | Language (frontend) | TypeScript | ^5 |
-| PDF rendering | @react-pdf/renderer | ^4.5.1 |
+| Data fetching | SWR | 2.4.1 |
+| PDF rendering | @react-pdf/renderer | 4.5.1 |
 | Backend framework | FastAPI | 0.115.0 |
 | ASGI server | Uvicorn | 0.30.6 |
 | Language (backend) | Python | 3.11+ |
 | ORM | SQLAlchemy (async) | 2.0.49 |
 | DB driver | asyncpg | 0.31.0 |
-| Database | Neon DB (PostgreSQL) | — |
 | Data validation | Pydantic | 2.13.4 |
 | HTTP client | httpx | 0.28.1 |
-| AI — primary | Gemini 2.5 Flash (`google-genai`) | 1.75.0 |
-| AI — fallback | Groq `llama-3.3-70b-versatile` | 1.2.0 |
+| Auth | fastapi-users | 13.0.0 |
+| OAuth client | httpx-oauth | 0.16.1 |
+| Email | Resend SDK | 2.0.0 |
+| AI SDK | openai (OpenAI-compat) | ≥1.30.0 |
 | Rate limiting | slowapi / limits | 0.1.9 / 5.8.0 |
+| Database | PostgreSQL (Neon DB) | — |
 | Monorepo | Turborepo | latest |
 | Package manager | npm | 10.9.7 |
 
-## Project structure
+---
+
+## AI Model Cascade
+
+All AI calls route through a `ModelCascade` that tries models in order, placing any rate-limited model in a 60-second cooldown before falling through to the next.
+
+**Groq** (primary — fast LPU inference):
+1. `llama-3.3-70b-versatile` ← default
+2. `meta-llama/llama-4-scout-17b-16e-instruct`
+
+**OpenRouter** (fallback — free tier):
+3. `google/gemma-4-26b-a4b-it:free`
+4. `google/gemma-4-31b-it:free`
+5. `qwen/qwen3-next-80b-a3b-instruct:free`
+6. `nvidia/nemotron-3-super-120b-a12b:free`
+
+Users can override the primary model per-account in Settings.
+
+---
+
+## Project Structure
 
 ```
-job-hunter/
+cv-forge/
 ├── apps/
-│   ├── api/                  ← FastAPI backend (port 8000)
-│   │   ├── ai/               ← GeminiClient, prompts, response schemas
-│   │   ├── db/               ← SQLAlchemy models + async engine
-│   │   ├── domain/           ← Pydantic I/O schemas, CV parsing logic
-│   │   ├── routers/          ← /cv, /jobs, /skills, /profile
-│   │   ├── services/         ← forge_service, profile_service, skills_service
-│   │   ├── tests/
-│   │   ├── main.py
-│   │   ├── init_db.py
-│   │   └── requirements.txt
-│   └── web/                  ← Next.js frontend (port 3000)
+│   ├── api/                        ← FastAPI backend (port 8000)
+│   │   ├── main.py                 ← App entry, CORS, rate-limit handler, DB init
+│   │   ├── init_db.py              ← Standalone table creation (runs before dev)
+│   │   ├── requirements.txt
+│   │   ├── ai/
+│   │   │   ├── cascade.py          ← ModelCascade: ordered fallback + cooldown logic
+│   │   │   ├── client.py           ← OpenRouterClient — typed AI methods
+│   │   │   ├── prompts.py          ← Prompt templates (ANALYZE_JD, FORGE_SECTION, …)
+│   │   │   └── schemas.py          ← Pydantic AI response models
+│   │   ├── auth/                   ← fastapi-users config, Google OAuth router
+│   │   ├── db/
+│   │   │   ├── base.py             ← Async engine, SessionLocal, get_session()
+│   │   │   └── models.py           ← User, UserProfile, MasterCV, TailoredCV, Skill
+│   │   ├── domain/
+│   │   │   ├── schemas.py          ← Pydantic I/O models
+│   │   │   ├── cv_logic/           ← split_sections(), merge_sections(), cv_json_builder
+│   │   │   └── parsers/            ← Job listing parser
+│   │   ├── routers/                ← cv, profile, skills, jobs
+│   │   ├── services/               ← forge_service, profile_service, skills_service
+│   │   └── tests/                  ← pytest unit tests (37 pure-function tests)
+│   └── web/                        ← Next.js 16 frontend (port 3000)
 │       └── src/
-│           ├── app/          ← App Router pages
-│           └── components/   ← CVDocument, CVViewer, CVManualForm, forge UI
+│           ├── app/
+│           │   ├── page.tsx         ← Job board
+│           │   ├── jobs/[id]/       ← Job detail
+│           │   ├── forge/           ← Forge page
+│           │   ├── cv-manager/      ← CV Manager
+│           │   ├── skills/          ← Skills DB
+│           │   ├── settings/        ← AI model selector
+│           │   ├── login/
+│           │   ├── register/
+│           │   └── verify-email/
+│           ├── components/
+│           │   ├── CVDocument.tsx   ← @react-pdf/renderer PDF template (Roboto, Polish chars)
+│           │   ├── CVViewer.tsx     ← PDF preview + download links
+│           │   ├── CVManualForm.tsx ← Structured CV creation form
+│           │   └── forge/
+│           │       ├── ForgeSetup.tsx
+│           │       ├── ForgeReview.tsx
+│           │       ├── ForgeProgress.tsx
+│           │       ├── CVEditor.tsx
+│           │       └── CVEditorSidebar.tsx
+│           └── lib/
+│               └── api.ts           ← All typed fetch wrappers
 ├── packages/
-│   ├── eslint-config/
-│   ├── typescript-config/
-│   └── ui/
 ├── tools/
-│   └── check-ram.js          ← Blocks dev start if free RAM < 1 GB
 └── turbo.json
 ```
 
+---
+
 ## Prerequisites
 
-- Node.js with npm 10.9.7+
+- Node.js ≥ 18 with npm 10
 - Python 3.11+
-- A [Neon](https://neon.tech) (or any PostgreSQL) database
-- A [Gemini API key](https://aistudio.google.com/app/apikey) (free tier: 15 RPM)
-- _(Optional)_ A [Groq API key](https://console.groq.com) for rate-limit fallback (free tier: 30 RPM)
+- A PostgreSQL database — [Neon](https://neon.tech) free tier works
+- A [Groq](https://console.groq.com) API key (free, recommended primary provider)
+- An [OpenRouter](https://openrouter.ai) API key (free, fallback provider)
+- A [Google Cloud](https://console.cloud.google.com) OAuth 2.0 client (for Google sign-in)
+- A [Resend](https://resend.com) API key (for email verification)
+
+---
 
 ## Setup
 
-**1. Clone and install**
+### 1. Clone and install
 
 ```bash
-git clone <repo-url>
-cd job-hunter
+git clone https://github.com/your-username/cv-forge.git
+cd cv-forge
 npm install
 ```
 
-**2. Create the Python virtual environment**
+### 2. Python virtual environment
 
 ```bash
 cd apps/api
-py -m venv .venv
+python -m venv .venv
+
+# Windows
 .venv\Scripts\pip install -r requirements.txt
+
+# macOS / Linux
+.venv/bin/pip install -r requirements.txt
+
+cd ../..
 ```
 
-**3. Configure environment variables**
+### 3. Configure environment variables
 
 ```bash
 cp apps/api/.env.example apps/api/.env
@@ -94,73 +190,135 @@ cp apps/api/.env.example apps/api/.env
 Edit `apps/api/.env`:
 
 ```env
-# Required
-DATABASE_URL=postgresql+asyncpg://user:password@host:5432/dbname
-GEMINI_API_KEY=your_gemini_key
+# Database (PostgreSQL)
+DATABASE_URL=postgresql+asyncpg://user:password@host/dbname
 
-# Optional
-GROQ_API_KEY=                    # fallback when Gemini rate-limits
-API_SECRET_KEY=                  # if set, all requests must send: Authorization: Bearer <value>
-ALLOWED_ORIGINS=http://localhost:3000
+# AI providers
+GROQ_API_KEY=gsk_...                  # primary (fast, free)
+OPENROUTER_API_KEY=sk-or-...          # fallback (free tier)
+
+# Auth
+JWT_SECRET=a-long-random-secret-string
+
+# Google OAuth — create at console.cloud.google.com
+GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-...
+
+# Email verification — resend.com
+RESEND_API_KEY=re_...
+
+# Frontend URL (CORS + email links)
+FRONTEND_URL=http://localhost:3000
 ```
 
-**4. Start development**
+### 4. Start development
 
 ```bash
 npm run dev
 ```
 
-This runs three tasks via Turborepo:
+Turborepo runs three tasks in sequence:
 
-1. RAM check (exits if < 1 GB free)
-2. `init_db.py` — creates all tables via SQLAlchemy
-3. API on `:8000` + frontend on `:3000` (parallel)
+| Task | What it does | Port |
+|---|---|---|
+| `init-db` | Creates all tables via SQLAlchemy (exits) | — |
+| `api` | Uvicorn FastAPI server | 8000 |
+| `web` | Next.js dev server | 3000 |
 
-## Pages
+Open [http://localhost:3000](http://localhost:3000).
 
-| Route | Description |
-|---|---|
-| `/` | Job listings |
-| `/cv-manager` | Import text or fill a form to create a Master CV; inline link editor per CV |
-| `/skills` | Skills DB — add/edit/delete categorised skill tags |
-| `/forge` | Paste a JD → AI rewrites CV → Before/After score badges → PDF preview + editor + download |
-| `/profile` | Global profile settings — auto-fills new CV forms |
+---
 
-## AI provider cascade
+## Environment Variables Reference
 
-All AI calls go through `GeminiClient._generate_json()` with automatic fallback on 429/503 errors:
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | Yes | PostgreSQL connection string (`postgresql+asyncpg://…`) |
+| `OPENROUTER_API_KEY` | Yes | OpenRouter API key — free-tier fallback AI |
+| `JWT_SECRET` | Yes | Secret used to sign session tokens |
+| `GOOGLE_CLIENT_ID` | Yes | Google OAuth 2.0 client ID |
+| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth 2.0 client secret |
+| `RESEND_API_KEY` | Yes | Resend key for verification emails |
+| `GROQ_API_KEY` | Recommended | Groq key — fast primary AI (LPU inference) |
+| `FRONTEND_URL` | Recommended | Frontend origin for CORS and email links |
 
-```
-gemini-2.5-flash  →  gemini-2.5-flash-lite  →  groq/llama-3.3-70b-versatile
-(15 RPM free)         (30 RPM free)              (30 RPM free, needs GROQ_API_KEY)
-```
+---
 
-## Running tests
+## Running Tests
 
 ```bash
 cd apps/api
+
+# Windows
 .venv\Scripts\python.exe -m pytest tests/ -v
+
+# macOS / Linux
+.venv/bin/python -m pytest tests/ -v
 ```
 
-## API endpoints
+37 unit tests cover CV Markdown parsing, section splitting/merging, header extraction, and skills serialisation. No mocks, no I/O — pure function tests only.
+
+---
+
+## API Endpoints
+
+Interactive docs available at `http://localhost:8000/docs` while the API is running.
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/health` | DB connectivity check |
+| `POST` | `/auth/register` | Register with email + password |
+| `POST` | `/auth/login` | Log in, receive JWT cookie |
+| `POST` | `/auth/logout` | Clear session |
+| `GET` | `/auth/google/authorize` | Start Google OAuth flow |
+| `GET` | `/cv/` | List Master CVs for current user |
 | `POST` | `/cv/import` | Import raw CV text (AI-cleaned) |
 | `POST` | `/cv/create` | Create CV from structured form (no AI) |
-| `GET` | `/cv/` | List all Master CVs |
 | `GET` | `/cv/{id}` | Get a single Master CV |
-| `PUT` | `/cv/{id}/links` | Update GitHub / portfolio URLs for a CV |
+| `PUT` | `/cv/{id}/links` | Update per-CV GitHub / portfolio URLs |
 | `POST` | `/cv/forge` | Run the forge loop — returns tailored CV + scores |
 | `DELETE` | `/cv/{id}` | Delete a Master CV |
 | `GET` | `/jobs/` | List job listings |
 | `GET` | `/jobs/{id}` | Get job detail |
-| `GET` | `/skills/` | List skills |
+| `GET` | `/skills/` | List skill categories |
 | `POST` | `/skills/` | Create skill category |
 | `PUT` | `/skills/{id}` | Update skill category |
 | `DELETE` | `/skills/{id}` | Delete skill category |
 | `GET` | `/profile/` | Get user profile |
 | `PUT` | `/profile/` | Update user profile |
 
-Interactive docs available at `http://localhost:8000/docs` while the API is running.
+---
+
+## The Forge Loop
+
+```
+POST /cv/forge
+├── analyze_jd()              → extracts required + nice-to-have keywords, job title
+├── calculate_match_score()   → ATS score for the original CV
+├── [if Skills DB rows exist AND CV has no skills section]
+│     → replace Skills section with full DB skills list
+├── for each forgeable section:
+│     forge_section()         → rewrites with JD keywords inserted
+│         (Aggressive mode: inserts keywords even if absent from original CV)
+├── merge_sections()          → reconstructs canonical Markdown
+├── calculate_match_score()   → ATS score for the tailored CV
+└── build_cv_json()           → converts Markdown → structured JSON for PDF renderer
+```
+
+The user reviews the result in the **Edit tab**, deletes any inaccurate AI insertions, then downloads the clean PDF.
+
+---
+
+## CV Creation Paths
+
+| Path | Endpoint | AI call? | Notes |
+|---|---|---|---|
+| Import raw text | `POST /cv/import` | Yes — `clean_cv` normalises to canonical Markdown | GitHub + portfolio pre-filled from UserProfile |
+| Fill in manually | `POST /cv/create` | No — `_form_to_markdown()` generates Markdown directly | Skills chip-selector pre-populated from Skills DB |
+
+Both paths produce a `MasterCV` row. Per-CV GitHub and portfolio URLs can be edited inline in the CV Manager and override the global profile defaults at forge time.
+
+---
+
+## License
+
+MIT

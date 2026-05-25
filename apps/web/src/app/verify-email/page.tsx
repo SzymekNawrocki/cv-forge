@@ -31,7 +31,7 @@ function VerifyEmailContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-forge-base">
-      <div className="w-full max-w-[400px] p-10 bg-[#111113] border border-forge-elevated rounded-xl text-center">
+      <div className="w-full max-w-[400px] p-10 bg-forge-card border border-forge-elevated rounded-xl text-center">
         {status === "loading" && (
           <>
             <div className="text-[40px] mb-4">⏳</div>
@@ -42,7 +42,7 @@ function VerifyEmailContent() {
           <>
             <div className="text-[40px] mb-4">✅</div>
             <h2 className="text-forge-text text-xl mb-3">Email verified!</h2>
-            <p className="text-[#888] text-sm mb-6">
+            <p className="text-forge-hint text-sm mb-6">
               Your account is active. You can now sign in.
             </p>
             <a
@@ -57,7 +57,7 @@ function VerifyEmailContent() {
           <>
             <div className="text-[40px] mb-4">❌</div>
             <h2 className="text-forge-text text-xl mb-3">Verification failed</h2>
-            <p className="text-[#888] text-sm mb-6">{errorMsg}</p>
+            <p className="text-forge-hint text-sm mb-6">{errorMsg}</p>
             <a href="/login" className="text-forge-orange text-[13px] no-underline">
               Back to sign in
             </a>

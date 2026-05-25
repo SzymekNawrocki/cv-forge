@@ -23,6 +23,17 @@
   --color-forge-heat:     #FF8C42;
   --color-forge-ember:    #FFC947;
 
+  /* Semantic text tokens */
+  --color-forge-label:    #C8C8D2;   /* form labels, section headers */
+  --color-forge-hint:     #9A9AA4;   /* secondary descriptions, helper text */
+  --color-forge-ghost:    #3A3A3E;   /* disabled states, near-invisible micro-text */
+
+  /* Semantic background/border tokens */
+  --color-forge-card:     #111113;   /* auth card / overlay backgrounds */
+  --color-forge-input:    #1A1A1C;   /* input field fills */
+  --color-forge-line:     #2A2A2E;   /* borders in card / auth context */
+  --color-forge-track:    #222224;   /* subtle internal borders on surfaces */
+
   --font-display: var(--font-barlow-condensed), sans-serif;
   --font-body:    var(--font-ibm-plex-sans), sans-serif;
 }

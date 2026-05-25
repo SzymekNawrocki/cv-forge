@@ -98,14 +98,14 @@ export default function ForgeFeatureCard({
       </h3>
 
       {/* Description */}
-      <p className="font-body text-[13px] text-[#6E6E78] leading-[1.75] mb-[22px]">
+      <p className="font-body text-[13px] text-forge-hint leading-[1.75] mb-[22px]">
         {description}
       </p>
 
       {/* Heat bar */}
       <div className="mb-[22px]">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="font-display text-[10px] font-bold tracking-[0.14em] uppercase text-[#5C5C66]">
+          <span className="font-display text-[10px] font-bold tracking-[0.14em] uppercase text-forge-hint">
             Forge Heat
           </span>
           <span
@@ -115,7 +115,7 @@ export default function ForgeFeatureCard({
             {heatPercent}%
           </span>
         </div>
-        <div className="h-[3px] bg-[#1A1A1C] rounded-[2px] overflow-hidden border border-[#222224]">
+        <div className="h-[3px] bg-forge-input rounded-[2px] overflow-hidden border border-forge-track">
           <div
             className="h-full rounded-[2px] transition-[width] duration-[800ms]"
             style={{

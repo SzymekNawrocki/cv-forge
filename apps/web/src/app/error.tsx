@@ -10,9 +10,9 @@ export default function Error({
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-forge-text">
       <h2 className="text-2xl font-bold m-0">Something went wrong</h2>
-      <p className="text-[#9CA3AF] m-0">An unexpected error occurred.</p>
+      <p className="text-forge-hint m-0">An unexpected error occurred.</p>
       {error.digest && (
-        <p className="text-xs text-[#6B7280] font-mono m-0">
+        <p className="text-xs text-forge-muted font-mono m-0">
           Error ID: {error.digest}
         </p>
       )}

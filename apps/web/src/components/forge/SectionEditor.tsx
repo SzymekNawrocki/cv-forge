@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { CVSection } from "@/components/CVDocument";
 
-const textareaClass = "w-full box-border bg-forge-base border border-[#222224] rounded-[5px] py-2 px-2.5 font-body text-xs text-forge-steel resize-y outline-none leading-[1.6]";
+const textareaClass = "w-full box-border bg-forge-base border border-forge-track rounded-[5px] py-2 px-2.5 font-body text-xs text-forge-steel resize-y outline-none leading-[1.6]";
 
 export default function SectionEditor({
   section,
@@ -39,7 +39,7 @@ export default function SectionEditor({
         <span className="font-display text-[11px] font-bold tracking-[0.12em] uppercase text-forge-steel">
           {section.heading}
         </span>
-        <span className="font-body text-[10px] text-[#5C5C66]">
+        <span className="font-body text-[10px] text-forge-hint">
           {open ? "▲" : "▼"} {!open && preview}
         </span>
       </button>

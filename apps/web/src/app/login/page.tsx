@@ -42,7 +42,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-forge-base">
-      <div className="w-full max-w-[400px] p-10 bg-[#111113] border border-forge-elevated rounded-xl text-center">
+      <div className="w-full max-w-[400px] p-10 bg-forge-card border border-forge-elevated rounded-xl text-center">
         <div className="flex justify-center -mt-10 -mb-[60px]">
           <Image
             src="/cv-forge-logo.png"
@@ -53,11 +53,11 @@ export default function LoginPage() {
             priority
           />
         </div>
-        <p className="text-[#888] text-sm mb-8">Sign in to your account</p>
+        <p className="text-forge-hint text-sm mb-8">Sign in to your account</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="block text-xs text-[#999] mb-1.5 uppercase tracking-[0.05em]">
+            <label className="block text-xs text-forge-label mb-1.5 uppercase tracking-[0.05em]">
               Email
             </label>
             <input
@@ -65,11 +65,11 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="forge-input w-full py-2.5 px-3.5 bg-[#1A1A1C] border border-[#2A2A2E] rounded-md text-forge-text text-sm"
+              className="forge-input w-full py-2.5 px-3.5 bg-forge-input border border-forge-line rounded-md text-forge-text text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs text-[#999] mb-1.5 uppercase tracking-[0.05em]">
+            <label className="block text-xs text-forge-label mb-1.5 uppercase tracking-[0.05em]">
               Password
             </label>
             <input
@@ -77,7 +77,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="forge-input w-full py-2.5 px-3.5 bg-[#1A1A1C] border border-[#2A2A2E] rounded-md text-forge-text text-sm"
+              className="forge-input w-full py-2.5 px-3.5 bg-forge-input border border-forge-line rounded-md text-forge-text text-sm"
             />
           </div>
 
@@ -95,13 +95,13 @@ export default function LoginPage() {
         </form>
 
         <div className="relative my-6 text-center">
-          <div className="border-t border-[#2A2A2E] absolute top-1/2 left-0 right-0" />
-          <span className="relative bg-[#111113] px-3 text-[#555] text-xs">or</span>
+          <div className="border-t border-forge-line absolute top-1/2 left-0 right-0" />
+          <span className="relative bg-forge-card px-3 text-forge-hint text-xs">or</span>
         </div>
 
         <button
           onClick={handleGoogle}
-          className="w-full py-[11px] bg-transparent border border-[#2A2A2E] rounded-md text-forge-text text-sm font-medium cursor-pointer flex items-center justify-center gap-[10px] hover:bg-forge-elevated transition-colors"
+          className="w-full py-[11px] bg-transparent border border-forge-line rounded-md text-forge-text text-sm font-medium cursor-pointer flex items-center justify-center gap-[10px] hover:bg-forge-elevated transition-colors"
         >
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -112,7 +112,7 @@ export default function LoginPage() {
           Continue with Google
         </button>
 
-        <p className="text-center mt-6 text-[13px] text-[#666]">
+        <p className="text-center mt-6 text-[13px] text-forge-hint">
           Don&apos;t have an account?{" "}
           <a href="/register" className="text-forge-orange no-underline">Sign up</a>
         </p>

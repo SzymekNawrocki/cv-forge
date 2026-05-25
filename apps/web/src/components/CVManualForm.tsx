@@ -16,8 +16,8 @@ import {
   type UserProfile,
 } from "@/lib/api";
 
-const inputClass = "forge-input bg-forge-surface border border-[#222224] rounded-md py-[9px] px-3 font-body text-[13px] text-forge-text outline-none w-full box-border";
-const labelClass = "font-display text-[10px] font-bold tracking-[0.14em] uppercase text-[#9A9AA4] block mb-[5px]";
+const inputClass = "forge-input bg-forge-surface border border-forge-track rounded-md py-[9px] px-3 font-body text-[13px] text-forge-text outline-none w-full box-border";
+const labelClass = "font-display text-[10px] font-bold tracking-[0.14em] uppercase text-forge-hint block mb-[5px]";
 
 function LabeledInput({
   label,
@@ -55,7 +55,7 @@ function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
     <button
       type="button"
       onClick={onClick}
-      className="py-1.5 px-3.5 bg-transparent border border-dashed border-forge-border rounded-[5px] font-display text-[11px] font-bold tracking-[0.12em] uppercase text-[#9A9AA4] cursor-pointer transition-all duration-[180ms] hover:border-forge-orange hover:text-forge-orange"
+      className="py-1.5 px-3.5 bg-transparent border border-dashed border-forge-border rounded-[5px] font-display text-[11px] font-bold tracking-[0.12em] uppercase text-forge-hint cursor-pointer transition-all duration-[180ms] hover:border-forge-orange hover:text-forge-orange"
     >
       + {label}
     </button>
@@ -67,7 +67,7 @@ function RemoveBtn({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="py-1 px-2 bg-transparent border-none text-[#5C5C70] text-base cursor-pointer leading-none shrink-0 transition-colors duration-150 hover:text-[#F87171]"
+      className="py-1 px-2 bg-transparent border-none text-forge-muted text-base cursor-pointer leading-none shrink-0 transition-colors duration-150 hover:text-[#F87171]"
     >
       ×
     </button>
@@ -146,7 +146,7 @@ function SkillCategoryRow({
             <button
               type="button"
               onClick={() => removeItem(item)}
-              className="bg-none border-none text-[#9A9AA4] cursor-pointer leading-none px-0.5 text-[13px] hover:text-[#F87171] transition-colors"
+              className="bg-none border-none text-forge-hint cursor-pointer leading-none px-0.5 text-[13px] hover:text-[#F87171] transition-colors"
             >×</button>
           </span>
         ))}
@@ -176,7 +176,7 @@ function BulletListEditor({
       <label className={labelClass}>Bullets</label>
       {bullets.map((b, i) => (
         <div key={i} className="flex gap-1.5 items-center">
-          <span className="text-[#9A9AA4] font-mono text-[11px] shrink-0">–</span>
+          <span className="text-forge-hint font-mono text-[11px] shrink-0">–</span>
           <input
             className={`${inputClass} flex-1`}
             value={b}

@@ -28,7 +28,7 @@ export default function CVViewer({ data, cvId, cleanData }: Props) {
         <PDFDownloadLink
           document={<CVDocument data={data} />}
           fileName={`tailored-cv-${cvId}-draft.pdf`}
-          className="inline-flex items-center gap-1.5 py-[7px] px-4 bg-[#1A1A1C] border border-[#2A2A2C] rounded-md text-xs font-semibold tracking-[0.06em] text-forge-steel no-underline"
+          className="inline-flex items-center gap-1.5 py-[7px] px-4 bg-forge-input border border-forge-line rounded-md text-xs font-semibold tracking-[0.06em] text-forge-steel no-underline"
         >
           {({ loading }: { loading: boolean }) =>
             loading ? "Preparing…" : "⬇ Draft PDF"

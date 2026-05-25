@@ -1,6 +1,7 @@
 "use client";
 
 import ForgeSpinner from "./ForgeSpinner";
+import ForgeProgress from "./ForgeProgress";
 import type { MasterCV } from "@/lib/api";
 
 interface Props {
@@ -36,22 +37,8 @@ export default function ForgeSetup({
           </p>
         </div>
 
-        {/* CV selector + Aggressive toggle + Forge */}
+        {/* Aggressive toggle + CV selector + Forge */}
         <div className="flex items-center gap-2.5">
-          <div className="relative">
-            <select
-              className="appearance-none bg-forge-surface border border-forge-border rounded-md py-[9px] pl-3 pr-9 font-body text-[13px] text-forge-text cursor-pointer outline-none min-w-[200px]"
-              value={selectedId}
-              onChange={(e) => onSelectId(Number(e.target.value))}
-            >
-              {cvs.length === 0 && <option value="">No CVs — import first</option>}
-              {cvs.map((cv) => (
-                <option key={cv.id} value={cv.id} className="bg-forge-surface text-forge-text">{cv.title}</option>
-              ))}
-            </select>
-            <span className="absolute right-[11px] top-1/2 -translate-y-1/2 pointer-events-none text-forge-muted text-[11px]">▾</span>
-          </div>
-
           {/* Aggressive toggle */}
           <label className="flex items-center gap-[7px] cursor-pointer select-none">
             <div
@@ -69,18 +56,32 @@ export default function ForgeSetup({
             </div>
             <span
               className="font-body text-[11px]"
-              style={{ color: aggressive ? "#FF8C42" : "#5C5C66", fontWeight: aggressive ? 700 : 400 }}
+              style={{ color: aggressive ? "var(--color-forge-heat)" : "var(--color-forge-muted)", fontWeight: aggressive ? 700 : 400 }}
             >
               Aggressive
             </span>
           </label>
+
+          <div className="relative">
+            <select
+              className="appearance-none bg-forge-surface border border-forge-border rounded-md py-[9px] pl-3 pr-9 font-body text-[13px] text-forge-text cursor-pointer outline-none min-w-[200px]"
+              value={selectedId}
+              onChange={(e) => onSelectId(Number(e.target.value))}
+            >
+              {cvs.length === 0 && <option value="">No CVs — import first</option>}
+              {cvs.map((cv) => (
+                <option key={cv.id} value={cv.id} className="bg-forge-surface text-forge-text">{cv.title}</option>
+              ))}
+            </select>
+            <span className="absolute right-[11px] top-1/2 -translate-y-1/2 pointer-events-none text-forge-muted text-[11px]">▾</span>
+          </div>
 
           <button
             onClick={onForge}
             disabled={disabled}
             className={`relative flex items-center gap-2 py-2.5 px-[22px] rounded-md font-display text-sm font-bold tracking-[0.12em] uppercase transition-all duration-200 overflow-hidden border ${
               disabled
-                ? "border-forge-border cursor-not-allowed text-[#3A3A3E]"
+                ? "border-forge-border cursor-not-allowed text-forge-ghost"
                 : "border-transparent cursor-pointer text-white shadow-[0_0_10px_rgba(255,87,34,0.18),0_2px_8px_rgba(0,0,0,0.40)]"
             }`}
             style={{ background: disabled ? "#1A1A1C" : "linear-gradient(135deg, #FF5722, #FF8C42)" }}
@@ -107,17 +108,16 @@ export default function ForgeSetup({
 
       {/* JD textarea */}
       <div className="flex-1 flex flex-col gap-2 min-h-0">
-        <label className="font-display text-[10px] font-bold tracking-[0.16em] uppercase text-[#5C5C66]">
+        <label className="font-display text-[10px] font-bold tracking-[0.16em] uppercase text-forge-label">
           Job Description
         </label>
         {isPending ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-forge-surface border border-[rgba(255,87,34,0.18)] rounded-[7px]">
-            <ForgeSpinner size={36} />
-            <span className="font-body text-[13px] text-forge-muted">AI is forging your CV...</span>
+          <div className="flex-1 flex items-center justify-center">
+            <ForgeProgress />
           </div>
         ) : (
           <textarea
-            className="forge-input flex-1 bg-forge-surface border border-[#222224] rounded-[7px] py-4 px-[18px] font-body text-[13px] text-forge-steel resize-none outline-none leading-[1.75]"
+            className="forge-input flex-1 bg-forge-surface border border-forge-track rounded-[7px] py-4 px-[18px] font-body text-[13px] text-forge-steel resize-none outline-none leading-[1.75]"
             placeholder="Paste the full job description here..."
             value={jdText}
             onChange={(e) => onJdChange(e.target.value)}
