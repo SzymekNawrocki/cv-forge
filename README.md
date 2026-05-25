@@ -30,6 +30,11 @@ Paste the full job description, select a Master CV, and toggle Aggressive mode.
 
 ![Forge — Setup](docs/screenshots/forge-setup.png)
 
+### Forge — Progress
+While forging, a live step list shows which stage the backend is executing.
+
+![Forge — Progress](docs/screenshots/forge-progress.png)
+
 ### Forge — Preview
 Before → After ATS match score badges. The tailored CV renders as a real PDF in the browser.
 
