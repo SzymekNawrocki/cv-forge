@@ -101,8 +101,15 @@ export default function ForgeSetup({
 
       {/* Error */}
       {error && (
-        <div className="py-3 px-4 bg-[rgba(248,113,113,0.06)] border border-[rgba(248,113,113,0.20)] rounded-[7px] font-body text-[13px] text-[#F87171]">
-          {error}
+        <div className="flex items-start gap-3 py-3 px-4 bg-[rgba(248,113,113,0.06)] border border-[rgba(248,113,113,0.20)] rounded-[7px]">
+          <span className="font-body text-[13px] text-[#F87171] flex-1">{error}</span>
+          <button
+            onClick={onForge}
+            disabled={isPending || !selectedId || !jdText.trim()}
+            className="shrink-0 py-1 px-3 font-display text-[10px] font-bold tracking-[0.12em] uppercase border border-[rgba(248,113,113,0.35)] rounded text-[#F87171] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[rgba(248,113,113,0.08)] transition-colors"
+          >
+            Retry
+          </button>
         </div>
       )}
 

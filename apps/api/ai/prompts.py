@@ -133,71 +133,47 @@ FORGE_PROMPTS: dict[ForgeStrategy, str] = {
     ForgeStrategy.AGGRESSIVE: FORGE_SECTION_PROMPT_AGGRESSIVE,
 }
 
-MATCH_SCORE_PROMPT = """\
-Score how well this CV covers the following requirements.
+CLEAN_CV_JSON_PROMPT = """\
+Parse this raw CV text into structured fields. Extract all information faithfully — do not add, remove, or invent anything.
 
-Use ONLY this fixed keyword list — do not add or remove requirements:
-Critical skills required: {required_keywords}
-Nice-to-have skills: {nice_to_have_keywords}
-
-For each critical skill: is it present in the CV (exact string or a clear direct equivalent)?
-For each nice-to-have: is it present?
-
-Scoring:
-- Start at 100
-- Subtract 8 per missing critical skill (max deduction 80)
-- Subtract 2 per missing nice-to-have
-- Add up to 5 bonus if the CV shows particularly strong relevant experience
-
-Return ONLY valid JSON:
+Return ONLY valid JSON with this exact structure:
 {{
-  "score": 72,
-  "missing_critical": ["Docker", "CI/CD pipelines"],
-  "missing_nice_to_have": ["Kubernetes"],
-  "reasoning": "Missing 2 critical skills; strong Python background adds bonus"
+  "name": "Full Name",
+  "job_title": "Current or most recent job title",
+  "email": "email@example.com",
+  "phone": "+48 000 000 000",
+  "portfolio_url": "https://portfolio.example.com",
+  "github_url": "https://github.com/username",
+  "location": "City, Country",
+  "about_me": "Professional summary as a single prose paragraph.",
+  "skills": [
+    {{"category": "Languages", "items": ["Python", "TypeScript", "SQL"]}}
+  ],
+  "projects": [
+    {{"name": "Project Name", "description": "What it does and tech used", "url": "", "date_range": "2023"}}
+  ],
+  "work_experience": [
+    {{"company": "Company Name", "role": "Job Title", "date_range": "Jan 2020 – Dec 2022", "bullets": ["Achievement 1", "Achievement 2"]}}
+  ],
+  "education": [
+    {{"institution": "University Name", "degree": "BSc Computer Science", "years": "2018–2022"}}
+  ],
+  "languages": [
+    {{"language": "English", "level": "C1"}}
+  ],
+  "certifications": [
+    {{"name": "AWS Certified Developer", "url": "", "year": "2023"}}
+  ]
 }}
 
-Job Description (context only):
-{jd_text}
-
-CV:
-{cv_text}
-"""
-
-CLEAN_CV_PROMPT = """\
-Format this raw CV text into clean, well-structured Markdown. Follow the format rules EXACTLY.
-
-FORMAT RULES (mandatory):
-1. Line 1: `# Full Name` — single # only. NEVER write `## # Name` or `## Name`.
-2. Line 2: Job title as plain text — no # prefix.
-3. Lines 3+: Contact fields as plain lines (email, phone, portfolio URL or label, github URL or label, city) — these go BEFORE the first ## section header.
-4. Section headers: `## Section Name` — double ## only. NEVER write `## ## Section` or `# Section`.
-5. Bullet items: use `- ` prefix.
-6. Skills bullets: `- **Category:** items` format.
-7. Project bullets: `- **Project Name:** description` format.
-8. Education bullets: `- **Institution:** degree | years` format.
-9. Work Experience entries: `### Company Name` sub-header, then `Role | Date` on the next line, then `- bullet` items.
-10. Certifications bullets: `- **Certification Name Year**` format.
-
-REQUIRED sections — include ALL of them, do not skip any:
-- About Me (prose paragraph — one block of text, no sub-bullets)
-- Skills
-- Projects
-- Work Experience (with ALL jobs, roles, dates, and bullet points)
-- Education (with ALL institutions)
-- Languages
-- Certifications (if present in original)
-
-CRITICAL:
-- Do NOT add, invent, or remove any information.
-- Preserve all specific details: tools, dates, company names, metrics, certifications.
-- Do NOT put a ## header inside section content — only at the start of a new section.
-- Contact info lines go BEFORE the first ## section header, not inside any section.
-
-Return ONLY valid JSON:
-{{
-  "markdown": "full formatted CV in markdown"
-}}
+Rules:
+- Extract ALL jobs, projects, education entries — do not skip any
+- If a field is not present in the CV, use empty string "" for strings and [] for arrays
+- Preserve all specific details: tool names, company names, dates, metrics, certifications exactly as written
+- about_me: combine Profile/Summary/Objective sections into one prose paragraph; use "" if none
+- skills: group items by category (e.g. Languages, Frameworks, Tools, Databases)
+- portfolio_url and github_url: extract from contact info if present, otherwise ""
+- name must be non-empty — use the full name from the CV header
 
 Raw CV text:
 {raw_text}

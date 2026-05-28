@@ -1,15 +1,23 @@
 from __future__ import annotations
 import json
 import logging
-import re
 import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.models import MasterCV, JobDescription, TailoredCV
-from domain.schemas import CVFormData
+from db.models import AICallLog, MasterCV, JobDescription, TailoredCV
+from domain.schemas import (
+    CVFormData,
+    SkillCategoryEntry,
+    ProjectEntry,
+    WorkExperienceEntry,
+    EducationEntry,
+    LanguageEntry,
+    CertificationEntry,
+)
+from ai.client import OllamaClient
+from ai.schemas import CleanCVJSON
 from ai.prompts import ForgeStrategy
 from domain.cv_logic.forge_pipeline import forge_cv
-from ai.client import OllamaClient
 from services.skills_service import build_skills_markdown, list_skills
 from services.profile_service import get_or_create_profile
 
@@ -20,14 +28,30 @@ class CVNotFoundError(Exception):
     pass
 
 
-def _normalize_cv_markdown(md: str) -> str:
-    """Strip double ## prefixes that Gemini sometimes produces in clean_cv output."""
-    lines = []
-    for line in md.split("\n"):
-        line = re.sub(r'^##\s+#\s+', '# ', line)
-        line = re.sub(r'^##\s+##\s+', '## ', line)
-        lines.append(line)
-    return "\n".join(lines)
+def _clean_cv_json_to_form_data(
+    cleaned: CleanCVJSON,
+    title: str,
+    github_url: str | None,
+    portfolio_url: str | None,
+) -> CVFormData:
+    """Convert AI-extracted CleanCVJSON into a CVFormData ready for _form_to_markdown."""
+    return CVFormData(
+        title=title,
+        github_url=github_url or cleaned.github_url or "",
+        portfolio_url=portfolio_url or cleaned.portfolio_url or "",
+        name=cleaned.name or "Unknown",
+        job_title=cleaned.job_title or "Professional",
+        email=cleaned.email or "",
+        phone=cleaned.phone or "",
+        location=cleaned.location or "",
+        about_me=cleaned.about_me or "",
+        skills=[SkillCategoryEntry(category=s.category, items=s.items) for s in cleaned.skills],
+        projects=[ProjectEntry(name=p.name, description=p.description, url=p.url, date_range=p.date_range) for p in cleaned.projects],
+        work_experience=[WorkExperienceEntry(company=e.company, role=e.role, date_range=e.date_range, bullets=e.bullets) for e in cleaned.work_experience],
+        education=[EducationEntry(institution=e.institution, degree=e.degree, years=e.years) for e in cleaned.education],
+        languages=[LanguageEntry(language=l.language, level=l.level) for l in cleaned.languages],
+        certifications=[CertificationEntry(name=c.name, url=c.url, year=c.year) for c in cleaned.certifications],
+    )
 
 
 def _form_to_markdown(data: CVFormData) -> str:
@@ -141,14 +165,15 @@ async def import_cv(
     github_url: str | None = None,
     portfolio_url: str | None = None,
 ) -> MasterCV:
-    result = await ollama.clean_cv(raw_text)
-    md = _normalize_cv_markdown(result.markdown or raw_text)
+    cleaned = await ollama.clean_cv(raw_text)
+    form_data = _clean_cv_json_to_form_data(cleaned, title, github_url, portfolio_url)
+    md = _form_to_markdown(form_data)
     cv = MasterCV(
         title=title,
         content_markdown=md,
         user_id=user_id,
-        github_url=github_url or None,
-        portfolio_url=portfolio_url or None,
+        github_url=form_data.github_url or None,
+        portfolio_url=form_data.portfolio_url or None,
     )
     session.add(cv)
     await session.commit()
@@ -186,13 +211,23 @@ async def run_forge(
     # This releases the connection before AI calls so Neon idle timeout can't kill it.
     profile = await get_or_create_profile(session, user_id)
     preferred = profile.preferred_model
-    ollama = OllamaClient(preferred_model=preferred)
+    usage_log: list[dict] = []
+
+    async def _collect_usage(model: str, prompt_tokens: int, completion_tokens: int, latency_ms: int) -> None:
+        usage_log.append({
+            "model": model,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "latency_ms": latency_ms,
+        })
+
+    ollama = OllamaClient(preferred_model=preferred, usage_callback=_collect_usage)
     if preferred and not ollama.is_known_model(preferred):
         logger.warning("preferred_model %s is stale, resetting to default", preferred)
         profile.preferred_model = None
         await session.commit()
         preferred = None
-        ollama = OllamaClient(preferred_model=None)
+        ollama = OllamaClient(preferred_model=None, usage_callback=_collect_usage)
 
     cv = await session.get(MasterCV, master_cv_id)
     if cv is None or cv.user_id != user_id:
@@ -222,7 +257,7 @@ async def run_forge(
         strategy=strategy,
     )
 
-    # Phase 3: short DB transaction — save results with a fresh connection
+    # Phase 3: short DB transaction — save results + usage logs with a fresh connection
     jd_obj = await session.get(JobDescription, jd_id)
     if jd_obj:
         jd_obj.extracted_keywords = ", ".join(output.keywords)
@@ -235,6 +270,17 @@ async def run_forge(
         match_score=output.match_score,
     )
     session.add(tailored)
+
+    for entry in usage_log:
+        session.add(AICallLog(
+            user_id=user_id,
+            model=entry["model"],
+            prompt_tokens=entry["prompt_tokens"],
+            completion_tokens=entry["completion_tokens"],
+            latency_ms=entry["latency_ms"],
+            success=True,
+        ))
+
     await session.commit()
     await session.refresh(tailored)
     return tailored, output.failed_sections

@@ -84,6 +84,7 @@ class PrivateNetworkMiddleware:
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Idempotent schema migrations for columns added after initial deploy
         await conn.execute(text(
             "ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS preferred_model VARCHAR(100)"
         ))

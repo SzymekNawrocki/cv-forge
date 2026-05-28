@@ -1,7 +1,8 @@
 """Unit tests for the pure (no-IO) functions in the CV pipeline."""
 from domain.cv_logic.parser import split_sections, merge_sections
 from domain.cv_logic.cv_json_builder import _parse_bullets, _extract_header
-from services.forge_service import _normalize_cv_markdown, _form_to_markdown
+from domain.cv_logic.match_score import calculate_match_score, _keyword_present
+from services.forge_service import _form_to_markdown
 from services.skills_service import build_skills_markdown
 from domain.schemas import (
     CVFormData,
@@ -148,34 +149,81 @@ def test_extract_header_empty():
     assert title == ""
 
 
-# ── _normalize_cv_markdown ────────────────────────────────────────────────────
+# ── calculate_match_score ────────────────────────────────────────────────────
 
-def test_normalize_removes_double_hash_name():
-    md = "## # Full Name\nTitle"
-    result = _normalize_cv_markdown(md)
-    assert result.startswith("# Full Name")
-    assert "## #" not in result
-
-
-def test_normalize_removes_double_section_prefix():
-    md = "## ## About Me\n\nSome text"
-    result = _normalize_cv_markdown(md)
-    assert result.startswith("## About Me")
-    assert "## ##" not in result
+def test_score_perfect():
+    score, missing_c, missing_n = calculate_match_score(
+        "Python TypeScript Docker Kubernetes CI/CD",
+        ["Python", "TypeScript", "Docker"],
+        ["Kubernetes", "CI/CD"],
+    )
+    assert score == 100.0
+    assert missing_c == []
+    assert missing_n == []
 
 
-def test_normalize_leaves_correct_markdown_unchanged():
-    md = "# Name\n\n## About Me\n\nText"
-    assert _normalize_cv_markdown(md) == md
+def test_score_missing_criticals():
+    score, missing_c, _ = calculate_match_score(
+        "Python developer",
+        ["Python", "Docker", "Kubernetes"],
+        [],
+    )
+    assert score == 100.0 - 8.0 * 2  # 2 missing criticals
+    assert "Docker" in missing_c
+    assert "Kubernetes" in missing_c
 
 
-def test_normalize_handles_multiline():
-    md = "## # Full Name\nTitle\n\n## ## Skills\n\n- Python"
-    result = _normalize_cv_markdown(md)
-    assert "# Full Name" in result
-    assert "## Skills" in result
-    assert "## #" not in result
-    assert "## ##" not in result
+def test_score_missing_nice_to_have():
+    score, _, missing_n = calculate_match_score(
+        "Python developer with Docker",
+        [],
+        ["Kubernetes", "Terraform"],
+    )
+    assert score == 100.0 - 2.0 * 2  # 2 missing nice-to-have
+    assert "Kubernetes" in missing_n
+
+
+def test_score_deduction_capped_at_80():
+    required = [f"skill{i}" for i in range(20)]
+    score, missing_c, _ = calculate_match_score("Python developer", required, [])
+    assert score == 20.0  # 100 - 80 (cap)
+    assert len(missing_c) == 20
+
+
+def test_score_empty_keywords():
+    score, missing_c, missing_n = calculate_match_score("anything", [], [])
+    assert score == 100.0
+    assert missing_c == []
+    assert missing_n == []
+
+
+def test_synonym_kubernetes_k8s():
+    assert _keyword_present("kubernetes", "deployed with k8s on prod")
+    assert _keyword_present("k8s", "used kubernetes for orchestration")
+
+
+def test_synonym_cicd():
+    assert _keyword_present("ci/cd", "set up continuous integration pipelines")
+    assert _keyword_present("ci/cd", "implemented cicd workflows")
+
+
+def test_synonym_js_javascript():
+    assert _keyword_present("javascript", "built with js and react")
+    assert _keyword_present("js", "strong javascript background")
+
+
+def test_synonym_aws():
+    assert _keyword_present("aws", "deployed on amazon web services")
+    assert _keyword_present("amazon web services", "aws certified developer")
+
+
+def test_fuzzy_match_typo():
+    # "postgress" (typo) should still match "postgres"
+    assert _keyword_present("postgres", "experience with postgress database")
+
+
+def test_case_insensitive():
+    assert _keyword_present("Docker", "used DOCKER and kubernetes")
 
 
 # ── _form_to_markdown ─────────────────────────────────────────────────────────

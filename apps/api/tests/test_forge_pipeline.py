@@ -2,8 +2,13 @@
 import pytest
 import pytest_asyncio
 from ai.prompts import ForgeStrategy
-from ai.schemas import ForgeResult, JDAnalysis, MatchScore
+from ai.schemas import ForgeResult, JDAnalysis
 from domain.cv_logic.forge_pipeline import forge_cv, TARGET_SCORE
+
+# Keywords that, when inserted into sections, guarantee a perfect match score.
+_HIGH_SCORE_CONTENT = "Python Docker Kubernetes"
+# Content that has none of the JD keywords → score stays low → retry fires.
+_LOW_SCORE_CONTENT = "rewritten content without matching keywords"
 
 
 # ── Fake provider ─────────────────────────────────────────────────────────────
@@ -14,20 +19,12 @@ class FakeProvider:
     def __init__(
         self,
         *,
-        after_score: float = 95.0,
-        retry_score: float = 95.0,
-        missing_critical_after: list[str] | None = None,
-        forge_rewritten: str = "rewritten content",
+        forge_rewritten: str = _LOW_SCORE_CONTENT,
         forge_rewritten_retry: str | None = None,
     ):
-        self.after_score = after_score
-        self.retry_score = retry_score
-        self.missing_critical_after = missing_critical_after or []
         self.forge_rewritten = forge_rewritten
         self.forge_rewritten_retry = forge_rewritten_retry if forge_rewritten_retry is not None else forge_rewritten
-
         self.forge_calls: list[dict] = []  # records every forge_section call
-        self._score_call_count = 0
 
     async def analyze_jd(self, jd_text: str) -> JDAnalysis:
         return JDAnalysis(
@@ -38,37 +35,21 @@ class FakeProvider:
             nice_to_have=["Kubernetes"],
         )
 
-    async def calculate_match_score(self, cv_text: str, jd_text: str, **kwargs) -> MatchScore:
-        self._score_call_count += 1
-        if self._score_call_count == 1:
-            # before-forge score
-            return MatchScore(score=50.0, missing_critical=["Python", "Docker"], missing_nice_to_have=["Kubernetes"])
-        if self._score_call_count == 2:
-            # after-forge score
-            return MatchScore(
-                score=self.after_score,
-                missing_critical=self.missing_critical_after,
-                missing_nice_to_have=[],
-            )
-        # retry score (3rd call)
-        return MatchScore(score=self.retry_score, missing_critical=[], missing_nice_to_have=[])
-
     async def forge_section(self, *, strategy: ForgeStrategy, section_name: str, **kwargs) -> ForgeResult:
         call_no = len(self.forge_calls)
         self.forge_calls.append({"strategy": strategy, "section_name": section_name, **kwargs})
-        # First pass: use forge_rewritten; retry passes (call_no >= N_FORGEABLE): use forge_rewritten_retry
-        rewritten = self.forge_rewritten if not self._is_retry_call(call_no) else self.forge_rewritten_retry
+        rewritten = self.forge_rewritten if call_no < _N_FORGEABLE else self.forge_rewritten_retry
         return ForgeResult(rewritten=rewritten)
-
-    def _is_retry_call(self, call_no: int) -> bool:
-        # We have 3 forgeable sections in the test CV; calls 0-2 are first pass, 3+ are retry
-        return call_no >= 3
 
     async def format_cv_json(self, cv_markdown: str) -> dict:
         return {"name": "Test", "title": "", "contact": {}, "sections": []}
 
     async def parse_entries_section(self, section_name: str, section_content: str) -> list[dict]:
         return []
+
+
+# Number of forgeable sections in _SAMPLE_CV (About Me, Skills — "Work Experience" not in FORGEABLE)
+_N_FORGEABLE = 2
 
 
 _SAMPLE_CV = """\
@@ -111,7 +92,8 @@ async def test_anchored_strategy_selects_anchored_prompt():
 
 @pytest.mark.asyncio
 async def test_aggressive_strategy_selects_aggressive_prompt():
-    provider = FakeProvider()
+    # High-score content → no retry, exactly _N_FORGEABLE calls
+    provider = FakeProvider(forge_rewritten=_HIGH_SCORE_CONTENT)
     await forge_cv(
         cv_markdown=_SAMPLE_CV,
         skills_markdown=None,
@@ -121,13 +103,12 @@ async def test_aggressive_strategy_selects_aggressive_prompt():
         portfolio_url=None,
         strategy=ForgeStrategy.AGGRESSIVE,
     )
-    # At least the first pass uses aggressive
     assert all(call["strategy"] is ForgeStrategy.AGGRESSIVE for call in provider.forge_calls)
 
 
 @pytest.mark.asyncio
 async def test_empty_rewritten_lands_in_failed_sections_and_keeps_original():
-    provider = FakeProvider(forge_rewritten="", after_score=95.0)
+    provider = FakeProvider(forge_rewritten="")
     output = await forge_cv(
         cv_markdown=_SAMPLE_CV,
         skills_markdown=None,
@@ -137,21 +118,14 @@ async def test_empty_rewritten_lands_in_failed_sections_and_keeps_original():
         portfolio_url=None,
         strategy=ForgeStrategy.ANCHORED,
     )
-    # All forgeable sections should fail
     assert len(output.failed_sections) > 0
-    # Original content preserved: CV still contains original bullets
     assert "Built APIs" in output.tailored_md
 
 
 @pytest.mark.asyncio
 async def test_retry_fires_only_for_aggressive_below_target_with_missing_criticals():
-    first_pass_calls_before_retry = 3  # 3 forgeable sections
-
-    provider = FakeProvider(
-        after_score=TARGET_SCORE - 1,          # below threshold → triggers retry
-        missing_critical_after=["Docker"],     # has missing criticals → retry fires
-        retry_score=92.0,
-    )
+    # Low-score content → score stays below TARGET → retry fires → 2×_N_FORGEABLE calls
+    provider = FakeProvider(forge_rewritten=_LOW_SCORE_CONTENT)
     await forge_cv(
         cv_markdown=_SAMPLE_CV,
         skills_markdown=None,
@@ -161,16 +135,12 @@ async def test_retry_fires_only_for_aggressive_below_target_with_missing_critica
         portfolio_url=None,
         strategy=ForgeStrategy.AGGRESSIVE,
     )
-    # First pass + retry pass = more than first_pass_calls_before_retry
-    assert len(provider.forge_calls) > first_pass_calls_before_retry
+    assert len(provider.forge_calls) > _N_FORGEABLE
 
 
 @pytest.mark.asyncio
 async def test_retry_does_not_fire_when_anchored():
-    provider = FakeProvider(
-        after_score=TARGET_SCORE - 1,
-        missing_critical_after=["Docker"],
-    )
+    provider = FakeProvider(forge_rewritten=_LOW_SCORE_CONTENT)
     await forge_cv(
         cv_markdown=_SAMPLE_CV,
         skills_markdown=None,
@@ -180,20 +150,14 @@ async def test_retry_does_not_fire_when_anchored():
         portfolio_url=None,
         strategy=ForgeStrategy.ANCHORED,
     )
-    # No retry for anchored mode — only the first pass calls
-    first_pass_count = sum(1 for c in provider.forge_calls if c["strategy"] is ForgeStrategy.ANCHORED)
-    assert len(provider.forge_calls) == first_pass_count  # no extra calls
+    # ANCHORED never retries — exactly the first-pass call count
+    assert len(provider.forge_calls) == _N_FORGEABLE
 
 
 @pytest.mark.asyncio
 async def test_retry_does_not_fire_when_score_above_target():
-    provider = FakeProvider(
-        after_score=TARGET_SCORE + 1,  # already above target
-        missing_critical_after=["Docker"],
-    )
-    first_pass_calls = []
-    original_forge = provider.forge_section
-
+    # High-score content → after-forge score >= TARGET → retry does NOT fire
+    provider = FakeProvider(forge_rewritten=_HIGH_SCORE_CONTENT)
     await forge_cv(
         cv_markdown=_SAMPLE_CV,
         skills_markdown=None,
@@ -203,16 +167,13 @@ async def test_retry_does_not_fire_when_score_above_target():
         portfolio_url=None,
         strategy=ForgeStrategy.AGGRESSIVE,
     )
-    # Score above target — no retry
-    assert provider._score_call_count == 2  # before + after, no 3rd retry score call
+    assert len(provider.forge_calls) == _N_FORGEABLE  # no retry pass
 
 
 @pytest.mark.asyncio
 async def test_retry_does_not_fire_when_no_missing_criticals():
-    provider = FakeProvider(
-        after_score=TARGET_SCORE - 1,
-        missing_critical_after=[],  # no missing criticals → no retry
-    )
+    # High-score content → all required keywords covered → no missing_critical → no retry
+    provider = FakeProvider(forge_rewritten=_HIGH_SCORE_CONTENT)
     await forge_cv(
         cv_markdown=_SAMPLE_CV,
         skills_markdown=None,
@@ -222,16 +183,16 @@ async def test_retry_does_not_fire_when_no_missing_criticals():
         portfolio_url=None,
         strategy=ForgeStrategy.AGGRESSIVE,
     )
-    assert provider._score_call_count == 2  # no 3rd score call = no retry
+    assert len(provider.forge_calls) == _N_FORGEABLE
 
 
 @pytest.mark.asyncio
 async def test_retry_fires_at_most_once():
     """Even if the retry score is still below target, no further retries."""
+    # Low-score content on both passes → two passes of _N_FORGEABLE, then stop
     provider = FakeProvider(
-        after_score=TARGET_SCORE - 10,
-        missing_critical_after=["Docker", "K8s"],
-        retry_score=TARGET_SCORE - 5,  # still below target after retry
+        forge_rewritten=_LOW_SCORE_CONTENT,
+        forge_rewritten_retry=_LOW_SCORE_CONTENT,
     )
     await forge_cv(
         cv_markdown=_SAMPLE_CV,
@@ -242,5 +203,5 @@ async def test_retry_fires_at_most_once():
         portfolio_url=None,
         strategy=ForgeStrategy.AGGRESSIVE,
     )
-    # Exactly 3 score calls: before, after first pass, after retry (no further retries)
-    assert provider._score_call_count == 3
+    # First pass (_N_FORGEABLE calls) + one retry pass (_N_FORGEABLE calls) = 2×_N_FORGEABLE
+    assert len(provider.forge_calls) == 2 * _N_FORGEABLE

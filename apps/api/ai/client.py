@@ -1,19 +1,18 @@
 from __future__ import annotations
-from ai.cascade import ModelCascade, ALL_MODELS, DEFAULT_MODEL
+from typing import Awaitable, Callable
+from ai.cascade import ModelCascade, ALL_MODELS, DEFAULT_MODEL, UsageCallback
 from ai.prompts import (
     ANALYZE_JD_PROMPT,
-    CLEAN_CV_PROMPT,
+    CLEAN_CV_JSON_PROMPT,
     FORMAT_CV_JSON_PROMPT,
     FORGE_PROMPTS,
     ForgeStrategy,
-    MATCH_SCORE_PROMPT,
     PARSE_ENTRIES_PROMPT,
 )
 from ai.schemas import (
-    CleanCVResult,
+    CleanCVJSON,
     ForgeResult,
     JDAnalysis,
-    MatchScore,
     ParsedEntries,
 )
 
@@ -22,9 +21,16 @@ FREE_MODELS = ALL_MODELS
 
 
 class OpenRouterClient:
-    def __init__(self, preferred_model: str | None = None):
+    def __init__(
+        self,
+        preferred_model: str | None = None,
+        usage_callback: UsageCallback | None = None,
+    ):
         self.model = preferred_model or DEFAULT_MODEL
-        self._cascade = ModelCascade(preferred_model=preferred_model)
+        self._cascade = ModelCascade(
+            preferred_model=preferred_model,
+            usage_callback=usage_callback,
+        )
 
     def is_known_model(self, name: str) -> bool:
         return self._cascade.is_known_model(name)
@@ -63,26 +69,9 @@ class OpenRouterClient:
         )
         return ForgeResult.model_validate(raw)
 
-    async def calculate_match_score(
-        self,
-        cv_text: str,
-        jd_text: str,
-        required_keywords: list[str] | None = None,
-        nice_to_have_keywords: list[str] | None = None,
-    ) -> MatchScore:
-        raw = await self._generate_json(
-            MATCH_SCORE_PROMPT.format(
-                cv_text=cv_text,
-                jd_text=jd_text,
-                required_keywords=", ".join(required_keywords or []) or "derive from job description",
-                nice_to_have_keywords=", ".join(nice_to_have_keywords or []) or "derive from job description",
-            )
-        )
-        return MatchScore.model_validate(raw)
-
-    async def clean_cv(self, raw_text: str) -> CleanCVResult:
-        raw = await self._generate_json(CLEAN_CV_PROMPT.format(raw_text=raw_text))
-        return CleanCVResult.model_validate(raw)
+    async def clean_cv(self, raw_text: str) -> CleanCVJSON:
+        raw = await self._generate_json(CLEAN_CV_JSON_PROMPT.format(raw_text=raw_text))
+        return CleanCVJSON.model_validate(raw)
 
     async def format_cv_json(self, cv_markdown: str) -> dict:
         return await self._generate_json(

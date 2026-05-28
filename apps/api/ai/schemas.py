@@ -2,6 +2,65 @@ from __future__ import annotations
 from pydantic import BaseModel, field_validator
 
 
+# ── Clean CV structured output ────────────────────────────────────────────────
+
+class CleanCVSkill(BaseModel):
+    category: str = ""
+    items: list[str] = []
+
+
+class CleanCVProject(BaseModel):
+    name: str = ""
+    description: str = ""
+    url: str = ""
+    date_range: str = ""
+
+
+class CleanCVWorkEntry(BaseModel):
+    company: str = ""
+    role: str = ""
+    date_range: str = ""
+    bullets: list[str] = []
+
+
+class CleanCVEducation(BaseModel):
+    institution: str = ""
+    degree: str = ""
+    years: str = ""
+
+
+class CleanCVLanguage(BaseModel):
+    language: str = ""
+    level: str = ""
+
+
+class CleanCVCertification(BaseModel):
+    name: str = ""
+    url: str = ""
+    year: str = ""
+
+
+class CleanCVJSON(BaseModel):
+    name: str = ""
+    job_title: str = ""
+    email: str = ""
+    phone: str = ""
+    portfolio_url: str = ""
+    github_url: str = ""
+    location: str = ""
+    about_me: str = ""
+    skills: list[CleanCVSkill] = []
+    projects: list[CleanCVProject] = []
+    work_experience: list[CleanCVWorkEntry] = []
+    education: list[CleanCVEducation] = []
+    languages: list[CleanCVLanguage] = []
+    certifications: list[CleanCVCertification] = []
+
+    model_config = {"extra": "ignore"}
+
+
+# ── JD analysis & forge ───────────────────────────────────────────────────────
+
 class JDAnalysis(BaseModel):
     job_title: str = ""
     seniority: str = ""
@@ -40,10 +99,6 @@ class MatchScore(BaseModel):
             elif item:
                 result.append(str(item))
         return result
-
-
-class CleanCVResult(BaseModel):
-    markdown: str = ""
 
 
 class WorkEntry(BaseModel):

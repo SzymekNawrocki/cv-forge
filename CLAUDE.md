@@ -14,20 +14,23 @@ AI tool for entry-level candidates. Takes a **Master CV** (Markdown) + a **Job D
 ```
 apps/api/
 ├── main.py                     ← FastAPI entry; runs create_all + idempotent ALTER TABLE migrations on startup
-├── .env                        ← DATABASE_URL, OPENROUTER_API_KEY
+├── .env                        ← DATABASE_URL, OPENROUTER_API_KEY, GROQ_API_KEY
 ├── requirements.txt
 ├── ai/
-│   ├── client.py               ← OpenRouterClient (alias: OllamaClient): methods return typed schema objects, not raw dicts
-│   ├── prompts.py              ← Prompt templates (ANALYZE_JD, FORGE_SECTION, CLEAN_CV, MATCH_SCORE, PARSE_ENTRIES, FORMAT_CV_JSON)
-│   └── schemas.py              ← Pydantic AI response models: JDAnalysis, ForgeResult, MatchScore, CleanCVResult, ParsedEntries, WorkEntry
+│   ├── cascade.py              ← ModelCascade: model fallback, cooldown, 3-step JSON parsing, usage_callback
+│   ├── client.py               ← OpenRouterClient (alias: OllamaClient): methods return typed schema objects
+│   ├── prompts.py              ← Prompt templates (ANALYZE_JD, CLEAN_CV_JSON, FORGE_SECTION, PARSE_ENTRIES, FORMAT_CV_JSON)
+│   └── schemas.py              ← Pydantic AI response models: JDAnalysis, ForgeResult, CleanCVJSON, ParsedEntries, WorkEntry
 ├── db/
 │   ├── base.py                 ← Async engine, SessionLocal, get_session()
-│   └── models.py               ← UserProfile, MasterCV, JobDescription, TailoredCV, Skill
+│   └── models.py               ← UserProfile, MasterCV, JobDescription, TailoredCV, Skill, AICallLog
 ├── domain/
 │   ├── schemas.py              ← Pydantic I/O models (incl. UserProfileRead/Update, CVFormData + sub-schemas, CVLinksUpdate)
 │   ├── cv_logic/
 │   │   ├── parser.py           ← split_sections() / merge_sections() on ## headers
-│   │   └── cv_json_builder.py  ← build_cv_json(md, client, github_url, portfolio_url): prefers explicit links over regex
+│   │   ├── cv_json_builder.py  ← build_cv_json(md, client, github_url, portfolio_url): prefers explicit links over regex
+│   │   ├── forge_pipeline.py   ← forge_cv(): parallel section forge (asyncio.gather + Semaphore(3)), deterministic scoring
+│   │   └── match_score.py      ← calculate_match_score(): rapidfuzz + synonym table, no LLM call
 │   └── parsers/
 │       └── job_parser.py       ← Job listing parser
 ├── services/
@@ -36,18 +39,19 @@ apps/api/
 │   └── skills_service.py       ← list_skills(), create_skill(), update_skill(), delete_skill(), build_skills_markdown()
 ├── routers/
 │   ├── cv.py                   ← POST /cv/import, POST /cv/create, GET /cv/, GET /cv/{id}, PUT /cv/{id}/links, POST /cv/forge, DELETE /cv/{id}
-│   ├── profile.py              ← GET /profile/, PUT /profile/
+│   ├── profile.py              ← GET /profile/, PUT /profile/, GET /profile/usage
 │   ├── skills.py               ← GET /skills/, POST /skills/, PUT /skills/{id}, DELETE /skills/{id}
 │   └── jobs.py                 ← GET /jobs/, GET /jobs/{id}
 └── tests/
     ├── conftest.py
     ├── test_job_parser.py
-    └── test_cv_pure.py         ← 37 unit tests for split_sections, merge_sections, _parse_bullets, _extract_header, _normalize_cv_markdown, _form_to_markdown, build_skills_markdown
+    ├── test_forge_pipeline.py  ← Async tests for forge_cv() retry logic, strategy routing, failed sections
+    └── test_cv_pure.py         ← 62 unit tests: split/merge, parse_bullets, extract_header, match_score, form_to_markdown, build_skills_markdown
 ```
 
 ## Canonical CV Markdown Format
 
-`clean_cv` must produce this exact structure (enforced by `CLEAN_CV_PROMPT` and `_normalize_cv_markdown`):
+Both `import_cv` and `create_cv_from_form` produce this exact structure via `_form_to_markdown()` in `forge_service.py`:
 
 ```
 # Full Name
@@ -82,10 +86,9 @@ Role | Date Range
 ```
 
 Rules:
-- `# Name` on line 1 — single `#` only. `## #` or `## ##` are double-prefix bugs.
+- `# Name` on line 1 — single `#` only.
 - Contact info as plain lines BEFORE the first `##` section — `split_sections()` puts this in the "header" key, parsed by `_extract_header()`.
-- `FORGE_SECTION_PROMPT` rule 3: rewritten output must NOT include the `##` heading — `merge_sections()` adds it. If the model includes it, double-wrapping corrupts all subsequent parsing.
-- `_normalize_cv_markdown()` in `forge_service.py` strips `## #→#` and `##  ##→##` as a safety net after `clean_cv`.
+- `FORGE_SECTION_PROMPT` rule: rewritten output must NOT include the `##` heading — `merge_sections()` adds it. If the model includes it, double-wrapping corrupts all subsequent parsing.
 - Education is `bullets` type (not `entries`) — matches original CV's `**Institution:** degree | years` format.
 
 ## UserProfile Architecture
@@ -93,7 +96,7 @@ Rules:
 `UserProfile` table: `id`, `name`, `job_title`, `email`, `phone`, `location`, `github_url`, `portfolio_url`, `preferred_model`, `updated_at`. **Singleton per user** — one row per user, created on first `GET /profile/`.
 
 - `github_url` and `portfolio_url` are global defaults — auto-filled into new CV forms (both import and manual).
-- `preferred_model` — OpenRouter model ID chosen in `/settings`. `run_forge()` reads this and instantiates `OllamaClient(preferred_model=...)`. Defaults to `google/gemini-2.5-pro-exp-03-25:free` if null.
+- `preferred_model` — OpenRouter model ID chosen in `/settings`. `run_forge()` reads this and instantiates `OllamaClient(preferred_model=...)`. Defaults to Groq primary if null.
 - Each `MasterCV` stores its own `github_url` and `portfolio_url` columns for **per-CV override**. Editable inline on the CV card in `/cv-manager`.
 - At forge time, `build_cv_json()` reads links from `MasterCV` columns (not from parsing markdown). Old CVs without explicit links fall back to regex extraction from the markdown header.
 
@@ -106,21 +109,41 @@ Rules:
 - `MasterCV` markdown remains source of truth for all non-skills sections (About Me, Work Experience, Projects, Education, Languages, Certifications).
 - **Skills injection (Option B)**: forge loop injects full DB skills list only if the CV has **no existing skills content**. Form-created CVs with explicit skill selections are preserved; text-imported CVs (no skills) still get full DB injection.
 
+## AICallLog Architecture
+
+`AICallLog` table: `id`, `user_id`, `model`, `prompt_tokens`, `completion_tokens`, `latency_ms`, `success`, `error_type`, `created_at`.
+
+- `ModelCascade` accepts an optional `usage_callback: async (model, prompt_tokens, completion_tokens, latency_ms) -> None`.
+- `run_forge()` passes a callback that appends to a local list, then writes all entries to `AICallLog` in Phase 3 (same transaction as `TailoredCV` save).
+- `GET /profile/usage` returns today's token totals: `total_tokens_today`, `call_count_today`, `prompt_tokens_today`, `completion_tokens_today`.
+
+## Match Scoring
+
+Scoring is **deterministic Python** — no LLM call. `domain/cv_logic/match_score.py`:
+- `calculate_match_score(cv_text, required_keywords, nice_to_have_keywords)` → `(score, missing_critical, missing_nice_to_have)`
+- Uses `rapidfuzz.fuzz.ratio` (threshold 88%) for fuzzy single-word matching.
+- Synonym table: `kubernetes`↔`k8s`, `ci/cd`↔`continuous integration`, `js`↔`javascript`, `aws`↔`amazon web services`, etc.
+- Formula: start 100, −8 per missing critical (cap −80), −2 per missing nice-to-have.
+- Makes retry convergence meaningful: scores don't drift between calls.
+
 ## CV Creation Paths
 
-Two paths — both produce a `MasterCV` row:
+Two paths — both produce a `MasterCV` row via `_form_to_markdown()`:
 
 | Path | Endpoint | AI call? | Links source |
 |---|---|---|---|
-| Import raw text | `POST /cv/import` | Yes — `clean_cv` (OpenRouter, default model) | From request body (pre-filled from UserProfile in UI) |
+| Import raw text | `POST /cv/import` | Yes — `clean_cv` → `CleanCVJSON` → `_clean_cv_json_to_form_data()` → `_form_to_markdown()` | User-provided overrides AI-extracted |
 | Manual form | `POST /cv/create` | **No** — `_form_to_markdown()` generates canonical markdown directly | From form fields (pre-filled from UserProfile) |
 
-`_form_to_markdown()` in `forge_service.py` converts `CVFormData` to canonical markdown. No AI call — data is already structured.
+Both paths go through `_form_to_markdown()` — one canonical place for markdown generation.
 
 ## Forge Loop
-1. `POST /cv/import` — raw text + optional `github_url`/`portfolio_url` → `clean_cv` (OpenRouter default model) → `_normalize_cv_markdown()` → `MasterCV` saved with explicit link fields
+1. `POST /cv/import` — raw text + optional links → `clean_cv` (returns `CleanCVJSON`) → `_clean_cv_json_to_form_data()` → `_form_to_markdown()` → `MasterCV` saved
    **OR** `POST /cv/create` — structured `CVFormData` → `_form_to_markdown()` → `MasterCV` saved directly (no AI)
-2. `POST /cv/forge` — `run_forge()` reads `UserProfile.preferred_model` → instantiates `OllamaClient(preferred_model=...)` → `analyze_jd` extracts keywords + `job_title` → `calculate_match_score` scores original CV → **if `Skill` rows exist AND CV has no skills content**, replace Skills section with full DB skills list → `forge_section` **aggressively** rewrites each FORGEABLE section adding JD keywords even if absent from original (body only, no `##` heading) → `merge_sections()` reconstructs markdown → `calculate_match_score` scores tailored CV → `build_cv_json(md, ollama, github_url=cv.github_url, portfolio_url=cv.portfolio_url)` converts tailored markdown to structured JSON → `TailoredCV` saved with `content_json`, `initial_match_score`, `match_score`
+2. `POST /cv/forge` — `run_forge()`:
+   - Phase 1 (short DB): load CV + skills + preferred_model, save JD, commit (releases connection before AI)
+   - Phase 2 (AI): `analyze_jd` → keywords + `job_title` → `calculate_match_score` (Python, no LLM) → skills injection if needed → **parallel** `forge_section` calls (`asyncio.gather` + `Semaphore(3)`) → `calculate_match_score` after → optional one-pass retry (AGGRESSIVE only, score < 90) → `build_cv_json`
+   - Phase 3 (short DB): save `TailoredCV` + `AICallLog` entries, commit
 
 ## Frontend Pages (`apps/web/src/app`)
 | Route | Description |
@@ -133,7 +156,7 @@ Two paths — both produce a `MasterCV` row:
 | `/settings` | App-wide settings — AI model selector (5 free OpenRouter models). Saves to `UserProfile.preferred_model` via `PUT /profile/`. |
 
 All API calls go through `src/lib/api.ts`. Client Components only at leaf level.
-- `APIError` class in `api.ts`: `new APIError(status, body)` — has `.isNotFound` and `.isServerError` helpers. All fetch wrappers use `handleResponse(res)` which throws `APIError` on non-2xx. Catch with `e instanceof APIError` to branch on status code.
+- `APIError` class in `api.ts`: `new APIError(status, body)` — has `.isNotFound` and `.isServerError` helpers. Forge error display parses the JSON body for the `detail` field and shows `[status] detail`. ForgeSetup error banner has a Retry button.
 
 ## Frontend Dependencies
 - `@react-pdf/renderer` — renders `TailoredCV.content_json` as a real PDF in the browser
@@ -142,7 +165,6 @@ All API calls go through `src/lib/api.ts`. Client Components only at leaf level.
 - `CVViewer.tsx` (`src/components/`) — `"use client"` wrapper with `PDFViewer` (WYSIWYG preview) + `PDFDownloadLink`; dynamically imported with `ssr: false` in forge page
 - Font files: `apps/web/public/fonts/Roboto-{Regular,Bold,Italic,BoldItalic}.ttf` — merged latin + latin-ext subsets via fonttools (Python). Registered via `Font.register()` using `window.location.origin` base URL (safe since CVDocument is browser-only via ssr:false).
 - Forge page has **Preview / Edit tabs** after forge runs — Edit tab shows per-section accordion with textareas that live-update the PDF preview via `editedData` state.
-- `react-markdown` + `remark-gfm` still in deps but no longer used in forge view
 
 ## Dev Startup
 
@@ -155,7 +177,7 @@ All API calls go through `src/lib/api.ts`. Client Components only at leaf level.
 Turbo config: `--concurrency=3` (2 persistent tasks require ≥3), `init-db` task is non-persistent/no-cache, `dev` task `dependsOn: ["init-db"]`.
 
 ## Development Rules
-- **AI Provider**: All AI calls go through `OpenRouterClient._generate_json()` (aliased as `OllamaClient`). Tries Groq first (fast LPU), falls back to OpenRouter free models. Cascade order:
+- **AI Provider**: All AI calls go through `OpenRouterClient._generate_json()` → `ModelCascade.generate_json()`. Tries Groq first (fast LPU), falls back to OpenRouter free models. Cascade order:
   **Groq** (primary, `GROQ_API_KEY`):
   1. `llama-3.3-70b-versatile` — default primary
   2. `meta-llama/llama-4-scout-17b-16e-instruct`
@@ -166,14 +188,14 @@ Turbo config: `--concurrency=3` (2 persistent tasks require ≥3), `init-db` tas
   6. `nvidia/nemotron-3-super-120b-a12b:free`
   User's `preferred_model` overrides the primary; cascade skips it and continues with remaining models. Models that 413 (payload too large) on real CV content are excluded from the list.
 - **OpenRouter SDK**: `openai>=1.30.0` — `AsyncOpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")`. Always pass `extra_headers={"HTTP-Referer": "https://cv-forge.app", "X-Title": "CV Forge"}` — required by OpenRouter for free models.
-- **JSON Only**: All calls use `response_format={"type": "json_object"}` + system prompt enforcing JSON-only response. Parse with `_parse_json()` in `ai/client.py`.
-- **AI Response Schemas**: Every `OpenRouterClient` method returns a typed Pydantic object from `ai/schemas.py` — never a raw dict. Add new AI calls by: (1) defining a schema in `ai/schemas.py`, (2) calling `Schema.model_validate(raw)` inside the client method. `MatchScore.clamp_score` validator enforces 0–100 range.
-- **Aggressive Forge**: `FORGE_SECTION_PROMPT` has NO anti-fabrication rule. AI freely adds skills and experience language from the JD even if absent from the original CV. The user reviews output in the Edit tab and removes inaccurate claims.
+- **JSON parsing**: 3-step in `cascade.py` `parse_json()`: direct `json.loads` → fence-regex extract → simple strip. If all fail, one LLM JSON-only retry before moving to next model.
+- **AI Response Schemas**: Every `OpenRouterClient` method returns a typed Pydantic object from `ai/schemas.py` — never a raw dict. Add new AI calls by: (1) defining a schema in `ai/schemas.py`, (2) calling `Schema.model_validate(raw)` inside the client method.
+- **Aggressive Forge**: `FORGE_SECTION_PROMPT_AGGRESSIVE` has NO anti-fabrication rule. AI freely adds skills and experience language from the JD even if absent from the original CV. The user reviews output in the Edit tab and removes inaccurate claims.
 - **DB init**: `create_all` runs in two places — `init_db.py` (pre-dev) and `main.py` lifespan (idempotent safety net). No Alembic yet. New columns on existing tables are added via `ALTER TABLE … ADD COLUMN IF NOT EXISTS` in both places (idempotent — safe to run repeatedly).
 - **TDD**: Tests in `apps/api/tests/` using pytest-asyncio. Pure (no-IO) functions tested in `test_cv_pure.py` — no mocks needed. Run: `apps/api/.venv/Scripts/python.exe -m pytest tests/ -v`.
 - **Skills**: Matt Pocock skills installed in `.claude/skills/`.
 - **Clean Architecture**: Routers → Services → Domain/DB. No DB calls in routers. All CV list/mutate operations go through `forge_service.py` functions — routers never import `sqlalchemy.select`.
-- **Concurrency**: Keep Turbo concurrency ≤ 3 (minimum for 2 persistent tasks). No LangChain/LlamaIndex. Process CV sections sequentially.
+- **Concurrency**: Keep Turbo concurrency ≤ 3 (minimum for 2 persistent tasks). No LangChain/LlamaIndex. Forge sections run in parallel via `asyncio.gather` + `Semaphore(3)`.
 - **Windows Python**: Use `.venv\Scripts\python.exe` in `apps/api/package.json` scripts — `python` and `python3` are not on PATH, only `py` (Windows Launcher). Venv lives at `apps/api/.venv`.
 - **No emojis in Python prints**: Windows console uses cp1250 — emoji in `print()` raises `UnicodeEncodeError` at startup.
 - **Next.js 16 Proxy (was Middleware)**: In Next.js 16, `middleware.ts` is renamed to `proxy.ts` and the export is `proxy` (not `middleware`). File lives at `apps/web/src/proxy.ts`. Same `config.matcher` syntax. Never create `middleware.ts` — it is ignored in Next.js 16.

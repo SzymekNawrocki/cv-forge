@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useTransition } from "react";
 import useSWR from "swr";
-import { fetchMasterCVs, forgeCV, type MasterCV, type TailoredCV } from "@/lib/api";
+import { fetchMasterCVs, forgeCV, APIError, type MasterCV, type TailoredCV } from "@/lib/api";
 import { stripMarkers } from "@/lib/aiMarker";
 import type { CVData } from "@/components/CVDocument";
 import ForgeSetup from "@/components/forge/ForgeSetup";
@@ -27,6 +27,17 @@ function stripAIMarkers(data: CVData): CVData {
 function parseCVData(result: TailoredCV): CVData | null {
   try { return JSON.parse(result.content_json) as CVData; }
   catch { return null; }
+}
+
+function extractErrorMessage(e: unknown): string {
+  if (e instanceof APIError) {
+    try {
+      const parsed = JSON.parse(e.message) as { detail?: string };
+      if (typeof parsed.detail === "string") return `[${e.status}] ${parsed.detail}`;
+    } catch { /* raw body */ }
+    return `[${e.status}] ${e.message}`;
+  }
+  return e instanceof Error ? e.message : "Forge failed";
 }
 
 export default function ForgePage() {
@@ -57,7 +68,7 @@ export default function ForgePage() {
         const parsed = parseCVData(tailored);
         if (parsed) setEditedData(parsed);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Forge failed");
+        setError(extractErrorMessage(e));
       }
     });
   }
