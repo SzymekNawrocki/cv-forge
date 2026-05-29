@@ -87,5 +87,10 @@ class OpenRouterClient:
         )
         return [entry.model_dump() for entry in ParsedEntries.model_validate(raw).entries]
 
+    async def ping(self) -> str:
+        """Send a minimal prompt; return the model name that responded. Used by /health/ai."""
+        raw = await self._cascade.generate_json('{"reply": "ok"}')
+        return self._cascade.last_used_model or "unknown"
+
 
 OllamaClient = OpenRouterClient

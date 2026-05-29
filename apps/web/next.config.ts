@@ -9,9 +9,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  experimental: {
-    optimizePackageImports: ["react-markdown", "remark-gfm"],
-  },
   async headers() {
     return [
       {

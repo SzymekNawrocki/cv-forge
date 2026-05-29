@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json
-import logging
 import uuid
+import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import AICallLog, MasterCV, JobDescription, TailoredCV
@@ -21,7 +21,7 @@ from domain.cv_logic.forge_pipeline import forge_cv
 from services.skills_service import build_skills_markdown, list_skills
 from services.profile_service import get_or_create_profile
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 
 class CVNotFoundError(Exception):
@@ -223,7 +223,7 @@ async def run_forge(
 
     ollama = OllamaClient(preferred_model=preferred, usage_callback=_collect_usage)
     if preferred and not ollama.is_known_model(preferred):
-        logger.warning("preferred_model %s is stale, resetting to default", preferred)
+        log.warning("preferred_model_stale", model=preferred)
         profile.preferred_model = None
         await session.commit()
         preferred = None
@@ -268,6 +268,7 @@ async def run_forge(
         content_json=json.dumps(output.content_json),
         initial_match_score=output.initial_score,
         match_score=output.match_score,
+        strategy=strategy.value,
     )
     session.add(tailored)
 

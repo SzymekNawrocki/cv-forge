@@ -1,12 +1,15 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.client import OllamaClient
 from ai.prompts import ForgeStrategy
 from auth.config import current_active_verified_user
 from db.base import get_session
-from db.models import MasterCV, User
+from db.models import MasterCV, TailoredCV, User
 from domain.schemas import CVFormData, MasterCVRead, TailoredCVRead
 from rate_limit import limiter
 from services.forge_service import (
@@ -78,13 +81,24 @@ async def list_cvs(
 
 
 @router.post("/forge", response_model=TailoredCVRead)
-@limiter.limit("5/minute")
 async def forge(
-    request: Request,
     body: ForgeRequest,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(current_active_verified_user),
 ):
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    daily_count = await session.scalar(
+        select(func.count())
+        .select_from(TailoredCV)
+        .join(MasterCV, TailoredCV.master_cv_id == MasterCV.id)
+        .where(MasterCV.user_id == user.id, TailoredCV.created_at >= cutoff)
+    )
+    if daily_count >= 20:
+        raise HTTPException(
+            status_code=429,
+            headers={"Retry-After": "3600"},
+            detail="Daily forge limit reached (20/day). Try again tomorrow.",
+        )
     try:
         tailored, failed_sections = await run_forge(
             body.master_cv_id, body.job_description_text, session,

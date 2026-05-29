@@ -1,4 +1,4 @@
-import logging
+import asyncio
 import os
 import sys
 from contextlib import asynccontextmanager
@@ -18,6 +18,31 @@ _missing = [v for v in _REQUIRED_VARS if not os.environ.get(v)]
 if _missing:
     sys.exit(f"Missing required environment variables: {', '.join(_missing)}")
 
+import sentry_sdk
+import structlog
+
+if _sentry_dsn := os.environ.get("SENTRY_DSN"):
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        traces_sample_rate=0.1,
+        environment=os.environ.get("ENVIRONMENT", "development"),
+    )
+
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer(),
+    ],
+    wrapper_class=structlog.BoundLogger,
+    context_class=dict,
+    logger_factory=structlog.PrintLoggerFactory(),
+)
+log = structlog.get_logger()
+
+from alembic.config import Config as AlembicConfig
+from alembic import command as alembic_command
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -25,18 +50,10 @@ from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 from sqlalchemy import text
 from db.base import engine
-import db.models  # noqa: F401 — registers all models
-from db.models import Base
 from rate_limit import limiter
 from routers import jobs, cv, skills, profile
 from auth.config import fastapi_users, auth_backend, google_oauth_client
 from auth.schemas import UserRead, UserCreate, UserUpdate
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-)
-logger = logging.getLogger(__name__)
 
 _ALLOWED_ORIGINS = [
     o.strip()
@@ -46,12 +63,7 @@ _ALLOWED_ORIGINS = [
 
 
 class PrivateNetworkMiddleware:
-    """Adds Access-Control-Allow-Private-Network: true to preflight responses.
-
-    Chrome 98+ sends Access-Control-Request-Private-Network on cross-port
-    localhost requests. Starlette's CORSMiddleware doesn't support this header
-    in the installed version, so we handle it in a thin outer ASGI wrapper.
-    """
+    """Adds Access-Control-Allow-Private-Network: true to preflight responses."""
 
     def __init__(self, app):
         self.app = app
@@ -82,28 +94,17 @@ class PrivateNetworkMiddleware:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        # Idempotent schema migrations for columns added after initial deploy
-        await conn.execute(text(
-            "ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS preferred_model VARCHAR(100)"
-        ))
-        await conn.execute(text(
-            "ALTER TABLE tailored_cvs DROP COLUMN IF EXISTS gaps_json"
-        ))
-    logger.info("API Ready - Database Connected")
+    def _run_migrations():
+        cfg = AlembicConfig("alembic.ini")
+        alembic_command.upgrade(cfg, "head")
+
+    await asyncio.to_thread(_run_migrations)
+    log.info("api_ready", db="ok")
     yield
 
 
 class _CatchAllMiddleware:
-    """Converts any unhandled exception to a 500 JSON response.
-
-    Must be added before CORSMiddleware so it sits inside the CORS scope —
-    that way the 500 response travels back through CORSMiddleware's wrapped
-    send and receives Access-Control-Allow-Origin headers. Without this,
-    exceptions bubble past CORSMiddleware before any headers are written and
-    the browser sees a CORS error instead of a 500.
-    """
+    """Converts any unhandled exception to a 500 JSON response inside the CORS scope."""
 
     def __init__(self, app):
         self.app = app
@@ -114,8 +115,8 @@ class _CatchAllMiddleware:
             return
         try:
             await self.app(scope, receive, send)
-        except Exception as exc:
-            logger.exception("Unhandled error")
+        except Exception:
+            log.exception("unhandled_error")
             response = JSONResponse(
                 status_code=500,
                 content={"detail": "Internal server error"},
@@ -128,8 +129,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Middleware order: last add_middleware = outermost (runs first).
-# _CatchAllMiddleware must be added first so it ends up innermost —
-# inside CORSMiddleware — so its 500 responses get CORS headers.
+# _CatchAllMiddleware must be innermost — inside CORSMiddleware — so its 500s get CORS headers.
 app.add_middleware(_CatchAllMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -139,7 +139,6 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 app.add_middleware(PrivateNetworkMiddleware)
-
 
 _frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
@@ -172,5 +171,17 @@ async def health():
             await conn.execute(text("SELECT 1"))
         return {"status": "ok", "db": "ok"}
     except Exception:
-        logger.exception("Health check DB ping failed")
+        log.exception("health_db_failed")
         return JSONResponse(status_code=503, content={"status": "degraded", "db": "unreachable"})
+
+
+@app.get("/health/ai")
+async def health_ai():
+    from ai.client import OllamaClient
+    try:
+        client = OllamaClient()
+        result = await client.ping()
+        return {"status": "ok", "model": result}
+    except Exception as exc:
+        log.warning("health_ai_failed", error=str(exc))
+        return JSONResponse(status_code=503, content={"status": "degraded", "error": str(exc)})

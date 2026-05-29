@@ -85,6 +85,11 @@ class TailoredCV(Base):
     content_json: Mapped[str] = mapped_column(Text, nullable=False)
     initial_match_score: Mapped[float | None] = mapped_column(Float)
     match_score: Mapped[float | None] = mapped_column(Float)
+    strategy: Mapped[str | None] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
 
     master_cv: Mapped[MasterCV] = relationship(back_populates="tailored_cvs")
     job_description: Mapped[JobDescription] = relationship(back_populates="tailored_cvs")

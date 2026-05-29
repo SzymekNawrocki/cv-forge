@@ -1,13 +1,13 @@
 from __future__ import annotations
 import json
-import logging
 import os
 import re
 import time
 from typing import Awaitable, Callable
 from openai import AsyncOpenAI
+import structlog
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 _GROQ_BASE = "https://api.groq.com/openai/v1"
 GROQ_MODELS = [
@@ -91,13 +91,11 @@ def parse_json(raw: str) -> dict:
     """Three-step JSON extraction: direct → fence-strip → minimal strip."""
     stripped = raw.strip()
 
-    # Step 1: direct parse
     try:
         return json.loads(stripped)
     except json.JSONDecodeError:
         pass
 
-    # Step 2: extract content inside ```json ... ``` or ``` ... ``` fences
     m = re.search(r"```(?:json)?\s*\n(.*?)\n?```", stripped, re.DOTALL)
     if m:
         try:
@@ -105,7 +103,6 @@ def parse_json(raw: str) -> dict:
         except json.JSONDecodeError:
             pass
 
-    # Step 3: strip any remaining fence markers
     cleaned = re.sub(r"```(?:json)?", "", stripped)
     cleaned = re.sub(r"```", "", cleaned).strip()
     return json.loads(cleaned)
@@ -121,6 +118,7 @@ class ModelCascade:
     ) -> None:
         self._preferred = preferred_model or DEFAULT_MODEL
         self._usage_callback = usage_callback
+        self.last_used_model: str | None = None
 
     @property
     def models(self) -> list[str]:
@@ -154,11 +152,11 @@ class ModelCascade:
         groq = _get_groq_client()
         for model, client, extra_headers in entries:
             if _is_cooling(model):
-                logger.debug("Skipping %s (rate-limited, cooling down)", model)
+                log.debug("model_cooling", model=model)
                 continue
             try:
-                provider = "Groq" if client is groq else "OpenRouter"
-                logger.info("[%s] Trying %s...", provider, model)
+                provider = "groq" if client is groq else "openrouter"
+                log.info("model_trying", provider=provider, model=model)
                 t0 = time.monotonic()
                 response = await client.chat.completions.create(
                     model=model,
@@ -175,14 +173,13 @@ class ModelCascade:
 
                 content = response.choices[0].message.content if response.choices else None
                 if not content:
-                    logger.warning("[%s] %s returned empty response, trying next...", provider, model)
+                    log.warning("model_empty_response", provider=provider, model=model)
                     continue
 
                 try:
                     result = parse_json(content)
                 except json.JSONDecodeError:
-                    # One JSON-only retry on the same model before moving to the next
-                    logger.warning("[%s] %s returned invalid JSON, attempting JSON-only retry", provider, model)
+                    log.warning("model_json_invalid_retrying", provider=provider, model=model)
                     try:
                         retry_resp = await client.chat.completions.create(
                             model=model,
@@ -198,15 +195,14 @@ class ModelCascade:
                         retry_content = retry_resp.choices[0].message.content if retry_resp.choices else None
                         if retry_content:
                             result = parse_json(retry_content)
-                            logger.info("[%s] %s JSON retry succeeded", provider, model)
+                            log.info("model_json_retry_ok", provider=provider, model=model)
                         else:
-                            logger.warning("[%s] %s JSON retry returned empty, trying next model", provider, model)
+                            log.warning("model_json_retry_empty", provider=provider, model=model)
                             continue
                     except (json.JSONDecodeError, Exception) as retry_err:
-                        logger.warning("[%s] %s JSON retry failed: %s, trying next model", provider, model, type(retry_err).__name__)
+                        log.warning("model_json_retry_failed", provider=provider, model=model, error=type(retry_err).__name__)
                         continue
 
-                # Fire usage callback (fire-and-forget; errors don't break the forge)
                 if self._usage_callback and response.usage:
                     try:
                         await self._usage_callback(
@@ -216,15 +212,16 @@ class ModelCascade:
                             latency_ms,
                         )
                     except Exception:
-                        logger.debug("Usage callback error (non-fatal)", exc_info=True)
+                        log.debug("usage_callback_error")
 
+                self.last_used_model = model
                 return result
 
             except Exception as e:
                 if _is_transient_error(e):
                     if _is_rate_limit_error(e):
                         _set_cooldown(model)
-                    logger.warning("[%s] %s failed (%s), trying next...", provider, model, type(e).__name__)
+                    log.warning("model_failed", provider=provider, model=model, error=type(e).__name__)
                     continue
                 raise
         raise RuntimeError("All models exhausted — try again later.")
