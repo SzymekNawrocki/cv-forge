@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.client import OllamaClient
 from ai.prompts import ForgeStrategy
-from auth.config import current_active_verified_user
+from auth.config import current_active_verified_user, current_user_with_sentry
 from db.base import get_session
 from db.models import MasterCV, TailoredCV, User
 from domain.schemas import CVFormData, MasterCVRead, TailoredCVRead
@@ -84,7 +84,7 @@ async def list_cvs(
 async def forge(
     body: ForgeRequest,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(current_active_verified_user),
+    user: User = Depends(current_user_with_sentry),
 ):
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
     daily_count = await session.scalar(

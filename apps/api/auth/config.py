@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 import uuid
+import sentry_sdk
 from fastapi import Depends
 from fastapi_users import FastAPIUsers
 from fastapi_users.authentication import AuthenticationBackend, CookieTransport, JWTStrategy
@@ -38,3 +39,9 @@ google_oauth_client = GoogleOAuth2(
 fastapi_users = FastAPIUsers[User, uuid.UUID](get_user_manager, [auth_backend])
 
 current_active_verified_user = fastapi_users.current_user(active=True, verified=True)
+
+
+async def current_user_with_sentry(user: User = Depends(current_active_verified_user)) -> User:
+    """Like current_active_verified_user but also tags the Sentry scope with the user id."""
+    sentry_sdk.set_user({"id": str(user.id)})
+    return user

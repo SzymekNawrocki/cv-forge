@@ -25,4 +25,6 @@ services:
         value: production
       - key: FRONTEND_URL
         sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
     healthCheckPath: /health
