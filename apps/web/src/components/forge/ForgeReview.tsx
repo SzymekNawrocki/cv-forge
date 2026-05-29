@@ -1,9 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import ForgeSpinner from "./ForgeSpinner";
 import ScoreBadge from "./ScoreBadge";
 import CVEditor from "./CVEditor";
+import { downloadDocx } from "@/lib/api";
 import type { MasterCV, TailoredCV } from "@/lib/api";
 import type { CVData } from "@/components/CVDocument";
 
@@ -42,6 +44,10 @@ export default function ForgeReview({
 }: Props) {
   const failedSections = result.failed_sections ?? [];
 
+  async function handleDocxDownload() {
+    await downloadDocx(result.master_cv_id, result.id);
+  }
+
   return (
     <main className="h-[calc(100vh-52px)] flex flex-col p-4 px-6 gap-3 bg-forge-base overflow-hidden">
       {/* Header */}
@@ -59,6 +65,13 @@ export default function ForgeReview({
             <span className="font-body text-[10px] text-[#B45309] font-bold">AI</span>
             <span className="font-body text-[10px] text-forge-muted">&nbsp;= AI insertion — review &amp; delete if inaccurate</span>
           </div>
+
+          <Link
+            href={`/forge/history?cvId=${result.master_cv_id}`}
+            className="py-[5px] px-3 font-display text-[10px] font-bold tracking-[0.12em] uppercase cursor-pointer rounded-[5px] border border-forge-border text-forge-muted no-underline hover:text-forge-text hover:border-forge-ghost transition-colors"
+          >
+            History
+          </Link>
 
           {/* Aggressive toggle */}
           <label className="flex items-center gap-1.5 cursor-pointer select-none">
@@ -137,6 +150,14 @@ export default function ForgeReview({
             </select>
             <span className="absolute right-[9px] top-1/2 -translate-y-1/2 pointer-events-none text-forge-muted text-[10px]">▾</span>
           </div>
+
+          {/* DOCX download */}
+          <button
+            onClick={handleDocxDownload}
+            className="w-full py-[7px] px-3 bg-transparent border border-forge-border rounded-[5px] font-display text-[10px] font-bold tracking-[0.1em] uppercase text-forge-label cursor-pointer hover:text-forge-text hover:border-forge-ghost transition-colors"
+          >
+            Download .docx
+          </button>
         </div>
 
         {/* Center: Preview / Edit */}
@@ -161,7 +182,7 @@ export default function ForgeReview({
           </div>
           {rightTab === "preview" && (
             <div className="flex-1 min-h-0 flex flex-col">
-              <CVViewer data={cvData} cvId={result.id} cleanData={cleanData ?? undefined} />
+              <CVViewer data={cvData} cvId={result.id} masterCvId={result.master_cv_id} cleanData={cleanData ?? undefined} />
             </div>
           )}
           {rightTab === "edit" && (

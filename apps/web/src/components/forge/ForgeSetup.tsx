@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import ForgeSpinner from "./ForgeSpinner";
 import ForgeProgress from "./ForgeProgress";
+import { scrapeJobUrl } from "@/lib/api";
 import type { MasterCV } from "@/lib/api";
 
 interface Props {
@@ -22,7 +24,32 @@ export default function ForgeSetup({
   aggressive, onAggressiveToggle,
   error, isPending, onForge,
 }: Props) {
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlValue, setUrlValue] = useState("");
+  const [scraping, setScraping] = useState(false);
+  const [scrapeError, setScrapeError] = useState<string | null>(null);
+
   const disabled = isPending || !selectedId || !jdText.trim();
+
+  async function handleScrape() {
+    if (!urlValue.trim()) return;
+    setScraping(true);
+    setScrapeError(null);
+    try {
+      const result = await scrapeJobUrl(urlValue.trim());
+      if (result.error) {
+        setScrapeError(result.message ?? "Could not scrape URL.");
+      } else if (result.text) {
+        onJdChange(result.text);
+        setShowUrlInput(false);
+        setUrlValue("");
+      }
+    } catch {
+      setScrapeError("Failed to fetch URL. Please paste the job description manually.");
+    } finally {
+      setScraping(false);
+    }
+  }
 
   return (
     <main className="h-[calc(100vh-52px)] flex flex-col p-6 px-8 gap-4 bg-forge-base overflow-hidden">
@@ -37,7 +64,7 @@ export default function ForgeSetup({
           </p>
         </div>
 
-        {/* Aggressive toggle + CV selector + Forge */}
+        {/* Controls */}
         <div className="flex items-center gap-2.5">
           {/* Aggressive toggle */}
           <label className="flex items-center gap-[7px] cursor-pointer select-none">
@@ -113,11 +140,48 @@ export default function ForgeSetup({
         </div>
       )}
 
-      {/* JD textarea */}
+      {/* JD input area */}
       <div className="flex-1 flex flex-col gap-2 min-h-0">
-        <label className="font-display text-[10px] font-bold tracking-[0.16em] uppercase text-forge-label">
-          Job Description
-        </label>
+        <div className="flex items-center justify-between shrink-0">
+          <label className="font-display text-[10px] font-bold tracking-[0.16em] uppercase text-forge-label">
+            Job Description
+          </label>
+          {!isPending && (
+            <button
+              onClick={() => { setShowUrlInput(!showUrlInput); setScrapeError(null); }}
+              className="font-display text-[10px] font-bold tracking-[0.12em] uppercase text-forge-muted border border-forge-border rounded px-2.5 py-1 cursor-pointer hover:text-forge-text hover:border-forge-ghost transition-colors"
+            >
+              {showUrlInput ? "Cancel" : "Paste URL"}
+            </button>
+          )}
+        </div>
+
+        {/* URL input */}
+        {showUrlInput && !isPending && (
+          <div className="flex gap-2 shrink-0">
+            <input
+              className="flex-1 bg-forge-surface border border-forge-track rounded-[7px] py-2.5 px-3.5 font-body text-[13px] text-forge-text outline-none"
+              placeholder="https://company.com/jobs/..."
+              value={urlValue}
+              onChange={(e) => setUrlValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleScrape()}
+              autoFocus
+            />
+            <button
+              onClick={handleScrape}
+              disabled={scraping || !urlValue.trim()}
+              className="px-4 py-2.5 rounded-[7px] font-display text-[11px] font-bold tracking-[0.12em] uppercase text-white border border-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+              style={{ background: "linear-gradient(135deg, #FF5722, #FF8C42)" }}
+            >
+              {scraping ? "Fetching..." : "Fetch"}
+            </button>
+          </div>
+        )}
+
+        {scrapeError && (
+          <p className="font-body text-[12px] text-[#F87171] m-0 shrink-0">{scrapeError}</p>
+        )}
+
         {isPending ? (
           <div className="flex-1 flex items-center justify-center">
             <ForgeProgress />

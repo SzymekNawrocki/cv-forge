@@ -25,6 +25,7 @@ export default function Navbar() {
 
       <div className="flex items-center gap-0.5">
         <a href="/cv-manager" className="forge-nav-link">CV Manager</a>
+        <a href="/skills" className="forge-nav-link">Skills</a>
         <a href="/forge" className="forge-nav-link">Forge</a>
         <a href="/settings" className="forge-nav-link">Settings</a>
         <div className="ml-4">

@@ -51,7 +51,7 @@ from slowapi import _rate_limit_exceeded_handler
 from sqlalchemy import text
 from db.base import engine
 from rate_limit import limiter
-from routers import jobs, cv, skills, profile
+from routers import jobs, cv, skills, profile, me, export
 from auth.config import fastapi_users, auth_backend, google_oauth_client
 from auth.schemas import UserRead, UserCreate, UserUpdate
 
@@ -92,6 +92,18 @@ class PrivateNetworkMiddleware:
         await self.app(scope, receive, send_with_pna)
 
 
+async def _cleanup_forge_jobs(app: FastAPI):
+    """Periodically remove completed/failed forge job entries to prevent memory growth."""
+    while True:
+        await asyncio.sleep(300)
+        to_delete = [
+            jid for jid, job in list(app.state.forge_jobs.items())
+            if job.get("status") in ("done", "failed")
+        ]
+        for jid in to_delete:
+            app.state.forge_jobs.pop(jid, None)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     def _run_migrations():
@@ -99,6 +111,8 @@ async def lifespan(app: FastAPI):
         alembic_command.upgrade(cfg, "head")
 
     await asyncio.to_thread(_run_migrations)
+    app.state.forge_jobs: dict = {}
+    asyncio.create_task(_cleanup_forge_jobs(app))
     log.info("api_ready", db="ok")
     yield
 
@@ -162,6 +176,8 @@ app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 app.include_router(cv.router, prefix="/cv", tags=["cv"])
 app.include_router(skills.router, prefix="/skills", tags=["skills"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])
+app.include_router(me.router, prefix="/me", tags=["me"])
+app.include_router(export.router, prefix="/cv", tags=["export"])
 
 
 @app.get("/health")

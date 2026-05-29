@@ -135,6 +135,34 @@ export interface TailoredCV {
   initial_match_score: number | null;
   match_score: number | null;
   failed_sections: string[];
+  strategy: string | null;
+  created_at: string | null;
+}
+
+export interface TailoredCVListItem {
+  id: number;
+  master_cv_id: number;
+  job_desc_id: number;
+  initial_match_score: number | null;
+  match_score: number | null;
+  strategy: string | null;
+  created_at: string | null;
+}
+
+export interface ForgeJobState {
+  status: "queued" | "running" | "done" | "failed";
+  progress: number;
+  result: TailoredCV | null;
+  error: string | null;
+  error_status: number | null;
+  created_at: string;
+}
+
+export interface UsageStats {
+  total_tokens_today: number;
+  call_count_today: number;
+  prompt_tokens_today: number;
+  completion_tokens_today: number;
 }
 
 export interface UserProfile {
@@ -249,11 +277,11 @@ export async function deleteCV(id: number): Promise<void> {
   await apiFetch(`${API_BASE}/cv/${id}`, { method: "DELETE" });
 }
 
-export async function forgeCV(
+export async function forgeCVAsync(
   master_cv_id: number,
   job_description_text: string,
   aggressive = false,
-): Promise<TailoredCV> {
+): Promise<{ job_id: string }> {
   const res = await apiFetch(`${API_BASE}/cv/forge`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -263,6 +291,60 @@ export async function forgeCV(
       strategy: aggressive ? "aggressive" : "anchored",
     }),
   });
+  return res.json();
+}
+
+export async function pollForgeJob(job_id: string): Promise<ForgeJobState> {
+  const res = await apiFetch(`${API_BASE}/cv/jobs/${job_id}`);
+  return res.json();
+}
+
+export async function getTailoredHistory(master_cv_id: number): Promise<TailoredCVListItem[]> {
+  const res = await apiFetch(`${API_BASE}/cv/${master_cv_id}/tailored`, { cache: "no-store" });
+  return res.json();
+}
+
+export function getDocxUrl(master_cv_id: number, tailored_cv_id: number): string {
+  return `${API_BASE}/cv/${master_cv_id}/tailored/${tailored_cv_id}/docx`;
+}
+
+export async function downloadDocx(master_cv_id: number, tailored_cv_id: number): Promise<void> {
+  const res = await apiFetch(getDocxUrl(master_cv_id, tailored_cv_id));
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `tailored-cv-${tailored_cv_id}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function getMyData(): Promise<void> {
+  const res = await apiFetch(`${API_BASE}/me/data`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "cv-forge-data.zip";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function deleteMe(): Promise<void> {
+  await apiFetch(`${API_BASE}/me`, { method: "DELETE" });
+}
+
+export async function scrapeJobUrl(url: string): Promise<{ text?: string; title?: string; error?: string; message?: string }> {
+  const res = await apiFetch(`${API_BASE}/jobs/scrape`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  return res.json();
+}
+
+export async function fetchUsage(): Promise<UsageStats> {
+  const res = await apiFetch(`${API_BASE}/profile/usage`, { cache: "no-store" });
   return res.json();
 }
 

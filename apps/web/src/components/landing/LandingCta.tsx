@@ -36,6 +36,12 @@ export function LandingCta() {
             Set up your profile first →
           </a>
         </div>
+
+        <div className="mt-16 pt-8 border-t border-forge-elevated flex justify-center gap-6 flex-wrap">
+          <a href="/privacy" className="font-body text-[12px] text-forge-ghost no-underline hover:text-forge-muted transition-colors">Privacy Policy</a>
+          <a href="/terms" className="font-body text-[12px] text-forge-ghost no-underline hover:text-forge-muted transition-colors">Terms of Service</a>
+          <a href="https://github.com/SzymekNawrocki" target="_blank" rel="noopener noreferrer" className="font-body text-[12px] text-forge-ghost no-underline hover:text-forge-muted transition-colors">GitHub</a>
+        </div>
       </div>
     </section>
   );

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Barlow_Condensed, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import CookieBanner from "@/components/CookieBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,12 +34,19 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "CV Forge",
-  description: "AI-powered CV tailoring for entry-level candidates. Rewrite your CV sections for ATS compatibility.",
+  title: "CV Forge — AI CV Tailoring",
+  description: "Tailor your CV to any job in 30 seconds. AI-powered keyword insertion for ATS compatibility.",
   openGraph: {
-    title: "CV Forge",
-    description: "AI-powered CV tailoring for ATS compatibility",
+    title: "CV Forge — AI CV Tailoring",
+    description: "Tailor your CV to any job in 30 seconds. AI-powered keyword insertion for ATS compatibility.",
     type: "website",
+    images: ["/og.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CV Forge — AI CV Tailoring",
+    description: "Tailor your CV to any job in 30 seconds.",
+    images: ["/og.png"],
   },
 };
 
@@ -55,6 +63,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <Navbar />
         {children}
+        <CookieBanner />
       </body>
     </html>
   );

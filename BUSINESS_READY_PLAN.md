@@ -3,10 +3,12 @@
 ## Status
 - ✅ Phase 0 — Foundation cleanup (done 2026-05-28)
 - ✅ Phase 1 — Forge core quality (done 2026-05-28)
-- ⬜ Phase 2 — Production deployability
-- ⬜ Phase 3 — UX polish
-- ⬜ Phase 4 — Trust & legal
-- ⬜ Phase 5 — Distinguishing polish
+- ✅ Phase 2 — Production deployability (done 2026-05-29)
+- ✅ Phase 3 — UX polish (done 2026-05-29)
+- ✅ Phase 4 — Trust & legal (done 2026-05-29)
+- ✅ Phase 5 — Distinguishing polish (done 2026-05-29)
+
+See MANUAL_SETUP.md for third-party connections (Google OAuth, Render, Vercel, Sentry, Resend).
 
 ---
 

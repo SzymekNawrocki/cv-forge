@@ -19,7 +19,7 @@ class UserProfile(Base):
     __tablename__ = "user_profile"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), unique=True, nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id", ondelete="CASCADE"), unique=True, nullable=False)
     name: Mapped[str | None] = mapped_column(String(255))
     job_title: Mapped[str | None] = mapped_column(String(255))
     email: Mapped[str | None] = mapped_column(String(255))
@@ -38,7 +38,7 @@ class MasterCV(Base):
     __tablename__ = "master_cvs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content_markdown: Mapped[str] = mapped_column(Text, nullable=False)
     github_url: Mapped[str | None] = mapped_column(String(500))
@@ -55,7 +55,7 @@ class Skill(Base):
     __tablename__ = "skills"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     category: Mapped[str] = mapped_column(String(255), nullable=False)
     items: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(
@@ -68,7 +68,7 @@ class JobDescription(Base):
     __tablename__ = "job_descriptions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     raw_text: Mapped[str] = mapped_column(Text, nullable=False)
     extracted_keywords: Mapped[str | None] = mapped_column(Text)
     company_name: Mapped[str | None] = mapped_column(String(255))
@@ -80,8 +80,8 @@ class TailoredCV(Base):
     __tablename__ = "tailored_cvs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    master_cv_id: Mapped[int] = mapped_column(ForeignKey("master_cvs.id"), nullable=False)
-    job_desc_id: Mapped[int] = mapped_column(ForeignKey("job_descriptions.id"), nullable=False)
+    master_cv_id: Mapped[int] = mapped_column(ForeignKey("master_cvs.id", ondelete="CASCADE"), nullable=False)
+    job_desc_id: Mapped[int] = mapped_column(ForeignKey("job_descriptions.id", ondelete="CASCADE"), nullable=False)
     content_json: Mapped[str] = mapped_column(Text, nullable=False)
     initial_match_score: Mapped[float | None] = mapped_column(Float)
     match_score: Mapped[float | None] = mapped_column(Float)

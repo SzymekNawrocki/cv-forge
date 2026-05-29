@@ -56,6 +56,20 @@ class TailoredCVRead(BaseModel):
     initial_match_score: float | None = None
     match_score: float | None = None
     failed_sections: list[str] = []
+    strategy: str | None = None
+    created_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class TailoredCVListItem(BaseModel):
+    id: int
+    master_cv_id: int
+    job_desc_id: int
+    initial_match_score: float | None = None
+    match_score: float | None = None
+    strategy: str | None = None
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
