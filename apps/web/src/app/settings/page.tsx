@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
-import { getProfile, updateProfile, getMyData, deleteMe, fetchUsage, type UsageStats } from "@/lib/api";
+import { getProfile, updateProfile, getMyData, deleteMe, fetchUsage, getCurrentUser, type UsageStats } from "@/lib/api";
 
 const FREE_MODELS: { id: string; label: string }[] = [
   { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B — Groq (recommended)" },
@@ -30,6 +30,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const { data: profile, mutate, error: loadError } = useSWR("profile", getProfile);
   const { data: usage } = useSWR<UsageStats>("usage", fetchUsage, { revalidateOnFocus: false });
+  const { data: currentUser } = useSWR("currentUser", getCurrentUser, { revalidateOnFocus: false });
+  const isDemo = currentUser?.is_demo ?? false;
 
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -101,7 +103,9 @@ export default function SettingsPage() {
               <select
                 value={activeModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
-                className="forge-input w-full bg-forge-base border border-forge-track rounded-md text-forge-text text-[13px] py-2.5 px-3 mb-4 outline-none cursor-pointer"
+                disabled={isDemo}
+                title={isDemo ? "Model selection is disabled in demo mode" : undefined}
+                className="forge-input w-full bg-forge-base border border-forge-track rounded-md text-forge-text text-[13px] py-2.5 px-3 mb-4 outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {FREE_MODELS.map((m) => (
                   <option key={m.id} value={m.id}>{m.label}</option>
@@ -142,54 +146,56 @@ export default function SettingsPage() {
         )}
 
         {/* Account */}
-        <SectionCard title="Account">
-          {profile?.email && (
-            <p className="text-[13px] text-forge-muted mb-5">
-              Signed in as <span className="text-forge-text">{profile.email}</span>
-            </p>
-          )}
-          <div className="flex flex-col gap-4">
-            <button
-              onClick={handleDownload}
-              disabled={downloading}
-              className="self-start py-[9px] px-5 text-[13px] font-semibold border border-forge-border rounded-md text-forge-text cursor-pointer disabled:opacity-50 hover:border-forge-ghost transition-colors bg-transparent"
-            >
-              {downloading ? "Preparing…" : "Download my data"}
-            </button>
-
-            {!deleteConfirm ? (
-              <button
-                onClick={() => setDeleteConfirm(true)}
-                className="self-start py-[9px] px-5 text-[13px] font-semibold border border-[rgba(248,113,113,0.30)] rounded-md text-[#F87171] cursor-pointer hover:border-[rgba(248,113,113,0.60)] transition-colors bg-transparent"
-              >
-                Delete account
-              </button>
-            ) : (
-              <div className="py-4 px-4 bg-[rgba(248,113,113,0.06)] border border-[rgba(248,113,113,0.20)] rounded-md">
-                <p className="font-body text-[13px] text-[#F87171] mb-3">
-                  This will permanently delete all your CVs, skills, and forge history. This cannot be undone.
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className="py-[7px] px-4 text-[12px] font-bold border-none rounded-md text-white cursor-pointer disabled:opacity-50"
-                    style={{ background: "#dc2626" }}
-                  >
-                    {deleting ? "Deleting…" : "Yes, delete my account"}
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirm(false)}
-                    className="py-[7px] px-4 text-[12px] font-bold border border-forge-border rounded-md text-forge-muted cursor-pointer hover:text-forge-text transition-colors bg-transparent"
-                  >
-                    Cancel
-                  </button>
-                </div>
-                {deleteError && <p className="font-body text-[12px] text-[#F87171] mt-2 mb-0">{deleteError}</p>}
-              </div>
+        {!isDemo && (
+          <SectionCard title="Account">
+            {profile?.email && (
+              <p className="text-[13px] text-forge-muted mb-5">
+                Signed in as <span className="text-forge-text">{profile.email}</span>
+              </p>
             )}
-          </div>
-        </SectionCard>
+            <div className="flex flex-col gap-4">
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="self-start py-[9px] px-5 text-[13px] font-semibold border border-forge-border rounded-md text-forge-text cursor-pointer disabled:opacity-50 hover:border-forge-ghost transition-colors bg-transparent"
+              >
+                {downloading ? "Preparing…" : "Download my data"}
+              </button>
+
+              {!deleteConfirm ? (
+                <button
+                  onClick={() => setDeleteConfirm(true)}
+                  className="self-start py-[9px] px-5 text-[13px] font-semibold border border-[rgba(248,113,113,0.30)] rounded-md text-[#F87171] cursor-pointer hover:border-[rgba(248,113,113,0.60)] transition-colors bg-transparent"
+                >
+                  Delete account
+                </button>
+              ) : (
+                <div className="py-4 px-4 bg-[rgba(248,113,113,0.06)] border border-[rgba(248,113,113,0.20)] rounded-md">
+                  <p className="font-body text-[13px] text-[#F87171] mb-3">
+                    This will permanently delete all your CVs, skills, and forge history. This cannot be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="py-[7px] px-4 text-[12px] font-bold border-none rounded-md text-white cursor-pointer disabled:opacity-50"
+                      style={{ background: "#dc2626" }}
+                    >
+                      {deleting ? "Deleting…" : "Yes, delete my account"}
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(false)}
+                      className="py-[7px] px-4 text-[12px] font-bold border border-forge-border rounded-md text-forge-muted cursor-pointer hover:text-forge-text transition-colors bg-transparent"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {deleteError && <p className="font-body text-[12px] text-[#F87171] mt-2 mb-0">{deleteError}</p>}
+                </div>
+              )}
+            </div>
+          </SectionCard>
+        )}
       </div>
     </main>
   );

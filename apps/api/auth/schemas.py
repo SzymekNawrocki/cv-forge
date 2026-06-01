@@ -3,7 +3,7 @@ from fastapi_users import schemas
 
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
-    pass
+    is_demo: bool = False
 
 
 class UserCreate(schemas.BaseUserCreate):

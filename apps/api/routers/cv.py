@@ -107,6 +107,8 @@ async def cv_import(
     ollama: OllamaClient = Depends(_ollama),
     user: User = Depends(current_active_verified_user),
 ):
+    if getattr(user, "is_demo", False):
+        raise HTTPException(403, 'Importing with AI is disabled in demo mode. Use "Fill In Manually".')
     return await import_cv(
         body.raw_text, body.title, ollama, session,
         user_id=user.id,
@@ -139,6 +141,50 @@ async def forge(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(current_user_with_sentry),
 ):
+    # Demo mode: skip AI entirely, persist JD + TailoredCV, return canned result instantly
+    if getattr(user, "is_demo", False):
+        import json as _json
+        from db.models import JobDescription as _JD
+        from services.demo_service import build_canned_forge_result
+
+        jd = _JD(raw_text=body.job_description_text, user_id=user.id)
+        session.add(jd)
+        await session.commit()
+
+        content_json_dict, initial_score, final_score = build_canned_forge_result()
+        tailored = TailoredCV(
+            master_cv_id=body.master_cv_id,
+            job_desc_id=jd.id,
+            content_json=_json.dumps(content_json_dict),
+            initial_match_score=initial_score,
+            match_score=final_score,
+            strategy=body.strategy.value,
+        )
+        session.add(tailored)
+        await session.commit()
+        await session.refresh(tailored)
+
+        job_id = str(uuid.uuid4())
+        result = TailoredCVRead(
+            id=tailored.id,
+            master_cv_id=tailored.master_cv_id,
+            job_desc_id=tailored.job_desc_id,
+            content_json=tailored.content_json,
+            initial_match_score=tailored.initial_match_score,
+            match_score=tailored.match_score,
+            failed_sections=[],
+            strategy=tailored.strategy,
+        ).model_dump()
+        request.app.state.forge_jobs[job_id] = {
+            "status": "done",
+            "progress": 1.0,
+            "result": result,
+            "error": None,
+            "error_status": None,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        return {"job_id": job_id}
+
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
     daily_count = await session.scalar(
         select(func.count())

@@ -51,7 +51,7 @@ from slowapi import _rate_limit_exceeded_handler
 from sqlalchemy import text
 from db.base import engine
 from rate_limit import limiter
-from routers import jobs, cv, skills, profile, me, export
+from routers import jobs, cv, skills, profile, me, export, demo
 from auth.config import fastapi_users, auth_backend, google_oauth_client
 from auth.schemas import UserRead, UserCreate, UserUpdate
 
@@ -104,6 +104,22 @@ async def _cleanup_forge_jobs(app: FastAPI):
             app.state.forge_jobs.pop(jid, None)
 
 
+async def _cleanup_demo_users():
+    """Periodically delete demo users older than 4 hours; CASCADE removes their data."""
+    from sqlalchemy import text as _text
+    while True:
+        await asyncio.sleep(1800)
+        try:
+            from db.base import SessionLocal as _SessionLocal
+            async with _SessionLocal() as session:
+                await session.execute(_text(
+                    'DELETE FROM "user" WHERE is_demo AND created_at < now() - interval \'4 hours\''
+                ))
+                await session.commit()
+        except Exception:
+            log.exception("demo_gc_failed")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     def _run_migrations():
@@ -113,6 +129,7 @@ async def lifespan(app: FastAPI):
     await asyncio.to_thread(_run_migrations)
     app.state.forge_jobs: dict = {}
     asyncio.create_task(_cleanup_forge_jobs(app))
+    asyncio.create_task(_cleanup_demo_users())
     log.info("api_ready", db="ok")
     yield
 
@@ -158,6 +175,7 @@ _frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
 app.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"])
 app.include_router(fastapi_users.get_register_router(UserRead, UserCreate), prefix="/auth", tags=["auth"])
+app.include_router(demo.router, prefix="/auth", tags=["auth"])
 app.include_router(fastapi_users.get_verify_router(UserRead), prefix="/auth", tags=["auth"])
 app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["users"])
 app.include_router(

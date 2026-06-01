@@ -1,3 +1,5 @@
+import { DemoButton } from "./DemoButton";
+
 export function LandingHero() {
   return (
     <section className="relative min-h-[calc(100vh-52px)] flex items-center justify-center overflow-hidden py-20 px-6">
@@ -49,20 +51,23 @@ export function LandingHero() {
         </p>
 
         {/* CTAs */}
-        <div className="flex gap-3.5 justify-center flex-wrap animate-[forge-fade-in_0.5s_ease-out_0.55s_both]">
-          <a
-            href="/forge"
-            className="landing-btn-primary inline-flex items-center gap-2 py-3.5 px-[34px] rounded-md text-white font-display text-[15px] font-bold tracking-[0.13em] uppercase no-underline shadow-[0_0_22px_rgba(255,87,34,0.32)]"
-            style={{ background: 'linear-gradient(90deg, #FF5722 0%, #FF8C42 100%)' }}
-          >
-            Start Forging →
-          </a>
-          <a
-            href="/cv-manager"
-            className="landing-btn-secondary inline-flex items-center gap-2 py-3.5 px-[34px] rounded-md bg-transparent text-forge-label font-display text-[15px] font-bold tracking-[0.13em] uppercase no-underline border border-[rgba(255,87,34,0.25)]"
-          >
-            Build Your CV
-          </a>
+        <div className="flex flex-col items-center gap-4 animate-[forge-fade-in_0.5s_ease-out_0.55s_both]">
+          <div className="flex gap-3.5 justify-center flex-wrap">
+            <a
+              href="/forge"
+              className="landing-btn-primary inline-flex items-center gap-2 py-3.5 px-[34px] rounded-md text-white font-display text-[15px] font-bold tracking-[0.13em] uppercase no-underline shadow-[0_0_22px_rgba(255,87,34,0.32)]"
+              style={{ background: 'linear-gradient(90deg, #FF5722 0%, #FF8C42 100%)' }}
+            >
+              Start Forging →
+            </a>
+            <a
+              href="/cv-manager"
+              className="landing-btn-secondary inline-flex items-center gap-2 py-3.5 px-[34px] rounded-md bg-transparent text-forge-label font-display text-[15px] font-bold tracking-[0.13em] uppercase no-underline border border-[rgba(255,87,34,0.25)]"
+            >
+              Build Your CV
+            </a>
+          </div>
+          <DemoButton />
         </div>
 
         {/* Bottom micro-text */}

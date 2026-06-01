@@ -10,6 +10,7 @@ import {
   updateCVLinks,
   getProfile,
   updateProfile,
+  getCurrentUser,
   type MasterCV,
   type UserProfile,
 } from "@/lib/api";
@@ -84,6 +85,8 @@ export default function CVManagerPage() {
 
   const { data: cvs = [], mutate: mutateCVs } = useSWR<MasterCV[]>("masterCVs", fetchMasterCVs);
   const { data: profile, mutate: mutateProfile } = useSWR<UserProfile>("profile", getProfile, { revalidateOnFocus: false });
+  const { data: currentUser } = useSWR("currentUser", getCurrentUser, { revalidateOnFocus: false });
+  const isDemo = currentUser?.is_demo ?? false;
   const profileLoaded = profile !== undefined;
 
   const [selected, setSelected] = useState<MasterCV | null>(null);
@@ -203,7 +206,7 @@ export default function CVManagerPage() {
     });
   }
 
-  const importDisabled = isPending || !title.trim() || !rawText.trim();
+  const importDisabled = isPending || !title.trim() || !rawText.trim() || isDemo;
 
   return (
     <main className="flex-1 flex min-h-0 bg-forge-base">
@@ -402,6 +405,11 @@ export default function CVManagerPage() {
                   <p className="font-body text-[13px] text-forge-hint m-0">
                     Paste raw CV text — AI will clean and structure it into Markdown.
                   </p>
+                  {isDemo && (
+                    <p className="font-body text-[12px] text-forge-orange m-0">
+                      AI import is disabled in demo mode — use &quot;Fill In Manually&quot; instead.
+                    </p>
+                  )}
                   <input
                     className={inputClass}
                     placeholder="CV title (e.g. My Master CV)"

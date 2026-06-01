@@ -95,6 +95,7 @@ export interface CurrentUser {
   email: string;
   is_verified: boolean;
   is_active: boolean;
+  is_demo: boolean;
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
@@ -105,6 +106,19 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   if (res.status === 401) return null;
   if (!res.ok) throw new APIError(res.status, res.statusText);
   return res.json();
+}
+
+export async function startDemo(): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/demo`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new APIError(res.status, text || res.statusText);
+  }
+  const secure = typeof window !== "undefined" && window.location.protocol === "https:";
+  document.cookie = `session=1; path=/; SameSite=Strict${secure ? "; Secure" : ""}; Max-Age=604800`;
 }
 
 export async function startGoogleOAuth(): Promise<string> {

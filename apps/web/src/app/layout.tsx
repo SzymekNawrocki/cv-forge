@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Barlow_Condensed, IBM_Plex_Sans } from "next/font/go
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import CookieBanner from "@/components/CookieBanner";
+import { DemoBanner } from "@/components/DemoBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -61,6 +62,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${barlowCondensed.variable} ${ibmPlexSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <DemoBanner />
         <Navbar />
         {children}
         <CookieBanner />
