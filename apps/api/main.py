@@ -41,8 +41,6 @@ structlog.configure(
 )
 log = structlog.get_logger()
 
-from alembic.config import Config as AlembicConfig
-from alembic import command as alembic_command
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -122,11 +120,6 @@ async def _cleanup_demo_users():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    def _run_migrations():
-        cfg = AlembicConfig("alembic.ini")
-        alembic_command.upgrade(cfg, "head")
-
-    await asyncio.to_thread(_run_migrations)
     app.state.forge_jobs: dict = {}
     asyncio.create_task(_cleanup_forge_jobs(app))
     asyncio.create_task(_cleanup_demo_users())
