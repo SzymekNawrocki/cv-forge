@@ -27,4 +27,6 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         sync: false
+      - key: DEMO_MODE
+        value: true
     healthCheckPath: /health
