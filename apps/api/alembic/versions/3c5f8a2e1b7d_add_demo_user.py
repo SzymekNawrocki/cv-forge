@@ -16,16 +16,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute("""
-        ALTER TABLE "user"
-            ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE;
-        ALTER TABLE "user"
-            ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-    """)
+    # One statement per execute: asyncpg rejects multiple commands in a single
+    # prepared statement ("cannot insert multiple commands into a prepared statement").
+    op.execute('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE')
+    op.execute('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()')
 
 
 def downgrade() -> None:
-    op.execute("""
-        ALTER TABLE "user" DROP COLUMN IF EXISTS is_demo;
-        ALTER TABLE "user" DROP COLUMN IF EXISTS created_at;
-    """)
+    op.execute('ALTER TABLE "user" DROP COLUMN IF EXISTS is_demo')
+    op.execute('ALTER TABLE "user" DROP COLUMN IF EXISTS created_at')
