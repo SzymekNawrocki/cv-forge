@@ -2,7 +2,14 @@ const _rawApiUrl = process.env.NEXT_PUBLIC_API_URL;
 if (!_rawApiUrl && process.env.NODE_ENV === "production") {
   throw new Error("NEXT_PUBLIC_API_URL is not set. Add it to Vercel environment variables.");
 }
-const API_BASE = (_rawApiUrl ?? "http://localhost:8000").replace(/\/$/, "");
+// Absolute origin of the FastAPI backend (used for SSR + OAuth redirect targets).
+const BACKEND_ORIGIN = (_rawApiUrl ?? "http://localhost:8000").replace(/\/$/, "");
+// In the browser we call our OWN origin ("/api") and let the Next.js rewrite
+// (see next.config.ts) proxy to the backend. This makes the `auth` cookie
+// first-party to the frontend domain, so it works even when the browser blocks
+// third-party cookies. On the server (SSR) we must use the absolute origin since
+// relative URLs have no host.
+const API_BASE = typeof window === "undefined" ? BACKEND_ORIGIN : "/api";
 
 export class APIError extends Error {
   constructor(
@@ -122,9 +129,11 @@ export async function startDemo(): Promise<void> {
 }
 
 export async function startGoogleOAuth(): Promise<string> {
-  const callbackUrl = `${API_BASE}/auth/google/callback`;
+  // OAuth must use the absolute backend origin: the callback_url is registered
+  // with Google and must be publicly reachable (not the proxied "/api" path).
+  const callbackUrl = `${BACKEND_ORIGIN}/auth/google/callback`;
   const res = await fetch(
-    `${API_BASE}/auth/google/authorize?callback_url=${encodeURIComponent(callbackUrl)}`,
+    `${BACKEND_ORIGIN}/auth/google/authorize?callback_url=${encodeURIComponent(callbackUrl)}`,
     { credentials: "include" },
   );
   if (!res.ok) throw new APIError(res.status, res.statusText);

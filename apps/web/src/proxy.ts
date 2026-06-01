@@ -19,5 +19,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|fonts|.*\\.png$).*)"],
+  // Exclude /api — those requests are proxied straight to the backend (see
+  // next.config.ts rewrites). The middleware must not intercept them, otherwise
+  // unauthenticated calls like POST /api/auth/demo get redirected to /login.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|fonts|.*\\.png$).*)"],
 };
